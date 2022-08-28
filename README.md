@@ -19,8 +19,9 @@ A uvicorn server is used to serve the application, as such, application is only 
 
 In order to use `status-sock.service` to launch the deployment server upon boot,
 1. Create virtual environment and install required packges with `run i`
-2. Place `status-sock.service` in /etc/systemd/system/ directory.
-3. Run `systemd enable --now sock-status` to enable the unit.
+2. Replace `<insert-user-name>`, `<insert-group-name>` and `<path-to-project-dir>` with user name, group name and path to the project directory respectively.
+3. Place `status-sock.service` in /etc/systemd/system/ directory.
+4. Run `systemd enable --now sock-status` to enable the unit.
 
 TODO: 
 

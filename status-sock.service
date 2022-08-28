@@ -6,7 +6,7 @@ StartLimitIntervalSec=30
 [Service]
 Type=simple
 User=<insert-user-name>
-Group=<insert-user-name>
+Group=<insert-group-name>
 DynamicUser=true
 
 WorkingDirectory=<path-to-project-dir>
