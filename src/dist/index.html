@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/index.css">
+
+  <link rel="apple-touch-icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+  <title>Sock Status</title>
+  <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
+</head>
+<body>
+  <script src="https://cdn.socket.io/4.5.0/socket.io.min.js" integrity="sha384-7EyYLQZgWBi67fBtVxw60/OWl1kjsfrPFcaU0pp0nAh+i8FD068QogUvg85Ewy1k" crossorigin="anonymous"></script>
+
+  <div id="header">
+    <span id="heartbeat-indicator" class="heartbeat"> </span>
+      <span id="client_count">
+        Clients: <span id="active_client_count">1</span>;
+        Desync: <span id="active_desync">1</span> µs
+      </span>
+  </div>
+
+  <div class="container">
+    <div id="Plot-Area"></div>
+    <div id="navigator" class="navigator">
+      <span class="navigator-targets disk-io" onclick="ChangePlot(event, 'Disk_io')">
+        <span>Disk IO</span>
+        <select name="disk-selector" id="disk-selector" onchange="DiskSelect(this.value)"></select>  
+      </span>
+      <span class="navigator-targets memory" onclick="ChangePlot(event, 'Memory')">Memory</span>
+      <span class="navigator-targets network" onclick="ChangePlot(event, 'Network_io')">Network IO</span>
+      <span class="navigator-targets cpu-util" onclick="ChangePlot(event, 'CPU_util')">CPU Util</span>
+      <span class="navigator-targets cpu-temp" onclick="ChangePlot(event, 'CPU_temp')">CPU Temp</span>
+    </div>
+  </div>
+
+  <script src="/index.js"></script>
+
+</body>
+</html>

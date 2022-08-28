@@ -1,0 +1,68 @@
+:root {
+  --text: #000;
+  --bg: #fff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #fff;
+    --bg: #000;
+  }
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: 'Avenir', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: left;
+  font-size: large;
+
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+}
+
+#header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.heartbeat {
+  border-radius: 50%;
+  background-color: grey;
+  height: 1em;
+  width: 1em;
+  margin-right: 0.5em;
+  float: left;
+}
+
+.navigator {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: space-evenly;
+  margin: 1em 1em 0 0;
+}
+.navigator-targets {
+  flex-grow: 1;
+  text-align: center;
+  padding: 0.5em;
+  /* margin-right: 1em; */
+  /* margin-left: 1em; */
+  border: 1px solid red;
+}
+
+.disk-io {
+  display: flex;
+  justify-content: space-evenly;
+}
+
+.hidden {
+  display: none;
+}
