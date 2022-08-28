@@ -1,0 +1,51 @@
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+case $1 in
+  install | i)
+    if [ ! -f "$SCRIPT_DIR/env/bin/python" ]; then 
+      virtualenv $SCRIPT_DIR/env
+    fi
+    if [ $# -ge 2 ]; then
+      REQ_FILE=$2
+    else
+      REQ_FILE=$SCRIPT_DIR/requirements.txt
+    fi
+    $SCRIPT_DIR/env/bin/python -m pip install -r $REQ_FILE
+    ;;
+  prod | p)
+    if [ $# -ge 2 ]; then
+      PORT=$2
+    else
+      PORT=8080
+    fi
+    $SCRIPT_DIR/env/bin/uvicorn main:app --host 0.0.0.0 --port $PORT --app-dir $SCRIPT_DIR/src
+    ;;
+  dev | d)
+    if [ $# -ge 2 ]; then
+      PORT=$2
+    else
+      PORT=8080
+    fi
+    $SCRIPT_DIR/env/bin/uvicorn main:app --host 0.0.0.0 --port $PORT --app-dir $SCRIPT_DIR/src --reload
+    ;;
+  test | t)
+    $SCRIPT_DIR/env/bin/python $SCRIPT_DIR/src/updators.py
+    ;;
+  *)
+    echo "Usage:"
+    echo "------"
+    echo
+    echo "install: Install packages from $2 in env/bin/pip. Default file requirements.txt"
+    echo "  env/bin/python -m pip install -r $2"
+    echo
+    echo "test: Test updators"
+    echo "  env/bin/python src/updators.py"
+    echo
+    echo "dev: Launch dev server"
+    echo "  env/bin/uvicorn main:app --host 0.0.0.0 --port 8080 --app-dir src --reload"
+    echo
+    echo "prod: Launch prod server"
+    echo "  env/bin/uvicorn main:app --host 0.0.0.0 --port 8080 --app-dir src"
+    echo
+    ;;
+esac
