@@ -85,6 +85,7 @@ const layout_config = {
 
 
 let time = [...Array(HISTORY_SIZE).keys()].reverse();
+let Up_Time = 0;
 
 let mem_util = { };
 let MemTraces = [ ];
@@ -93,6 +94,7 @@ let CpuUtilTraces = [ ];
 
 let CpuTempTraces = [ ];
 
+const all_disks = [];
 const disk_io = {};
 let DiskIoTraces = [ ];
 
@@ -163,7 +165,7 @@ const color_scheme_layout = {
 }
 
 function ChangePlot(event, key) {
-  if (event != 0 && ["select", "option"].includes(event.target.nodeName.toLowerCase())) {
+  if ((event != 0 && ["select", "option"].includes(event.target.nodeName.toLowerCase()))) {
     return;
   }
   trace = key;
@@ -213,7 +215,7 @@ const sio = io()
 const heartbeat_colors = ["red", "green"];
 var status_count = true;
 const indicator_el = document.getElementById("heartbeat-indicator");
-const active_desync = document.getElementById("active_desync");
+const host_uptime = document.getElementById("host_uptime");
 
 sio.on("connect", () => {
   console.log("connected");
@@ -224,6 +226,8 @@ sio.on("client_count", (host) => {
 });
 
 sio.on("status_init", (init) => {
+  document.getElementById("footer").innerText = `Hostname: ${init.Hostname}`;
+
   NUM_CPU_CORES = init.CPU_Util.length;
   NUM_CPU_PACKAGES = Object.keys(init.CPU_Temp).filter(v => v.startsWith("Core")).length;
 
@@ -366,7 +370,11 @@ sio.on("status_init", (init) => {
     disk_option.value = disk;
     disk_option.innerText = disk;
     document.getElementById("disk-selector").appendChild(disk_option);
+
+    all_disks.splice(all_disks.length, 0, disk);
   }
+
+  Up_Time = init.Up_Time;
 
   init_done = 1;  // done
 
@@ -404,7 +412,6 @@ function update_Disk_io({Disk_IO}) {
 }
 
 function update_CPU_temp({CPU_Temp}) {
-  console.log(CPU_Temp);
   const pkg_key = Object.keys(CPU_Temp).filter(c => !c.startsWith("Core"))[0];
   CpuTempTraces[NUM_CPU_PACKAGES].name = `Core pkg: ${CPU_Temp[pkg_key]}° C`;
   CpuTempTraces[NUM_CPU_PACKAGES].y.splice(0, HISTORY_LAST, ...CpuTempTraces[NUM_CPU_PACKAGES].y.slice(1, HISTORY_LAST));
@@ -485,7 +492,7 @@ function update_Neteork_io({Network_IO}) {
   layout_config.Network_io.y_axis_max = layout_config.Network_io.y_axis_max * 1.25
 }
 
-function do_blink({time}) {
+function do_blink() {
   status_count = !status_count;
 
   indicator_el.style.backgroundColor = heartbeat_colors[status_count%2];
@@ -494,11 +501,53 @@ function do_blink({time}) {
     indicator_el.style.backgroundColor = heartbeat_colors[status_count%2];      
   }, REFRESH_PERIOD * 1000/2);
 
-  active_desync.innerText = (time * 1_000_000).toFixed(1);
+  host_uptime.innerText = formatTime(Up_Time);
+  Up_Time += 1;
+}
+
+const MINS_TO_SECS = 60;
+const HRS_TO_SECS = MINS_TO_SECS * 60;
+const DAYS_TO_SECS = HRS_TO_SECS * 24;
+const WEEKS_TO_SECS = DAYS_TO_SECS * 7;
+const YRS_TO_SECS = WEEKS_TO_SECS * 52 + DAYS_TO_SECS * (2.2475);
+const uptime_factorised = {}
+
+function formatTime(uptime) {
+  let cum_uptime = uptime;
+
+  uptime_factorised.y = Math.floor(cum_uptime / YRS_TO_SECS);
+  cum_uptime -= uptime_factorised.y * YRS_TO_SECS;
+
+  uptime_factorised.w = Math.floor(cum_uptime / WEEKS_TO_SECS);
+  cum_uptime -= uptime_factorised.w * WEEKS_TO_SECS;
+
+  uptime_factorised.d = Math.floor(cum_uptime / DAYS_TO_SECS);
+  cum_uptime -= uptime_factorised.d * DAYS_TO_SECS;
+
+  uptime_factorised.h = Math.floor(cum_uptime / HRS_TO_SECS);
+  cum_uptime -= uptime_factorised.h * HRS_TO_SECS;
+
+  uptime_factorised.m = Math.floor(cum_uptime / MINS_TO_SECS);
+  cum_uptime -= uptime_factorised.m * MINS_TO_SECS;
+
+  uptime_factorised.s = cum_uptime;
+
+  time_units = ['y', 'w', 'd', 'h', 'm', 's'];
+  const uptime_factors_to_show = [": "]
+
+  for (unit of time_units) {
+    if (uptime_factorised[unit]) {
+      uptime_factors_to_show.splice(uptime_factors_to_show.length, 0, `${uptime_factorised[unit]}${unit}`);
+    }
+    if (uptime_factors_to_show.length >= 3) {
+      return uptime_factors_to_show.join(" ");
+    }
+  }
+  return uptime_factors_to_show.join(" ");
 }
 
 sio.on("status_update", (status) => {
-  do_blink(status);
+  do_blink();
   // console.log(status);
 
   isDarkMode = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -539,5 +588,35 @@ sio.on("status_update", (status) => {
         layout_config[resource].updator(status);
       }
     }
+  }
+});
+
+// ----------------------------------------------------
+
+document.onkeydown = ((event) => {
+  switch (event.key) {
+    case "1":
+      if (trace == 'Disk_io') {
+        disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + 1) % all_disks.length];
+        document.getElementById("disk-selector").value = disk_to_show;
+      }
+      ChangePlot(0, 'Disk_io');
+      break;
+
+    case "2":
+      ChangePlot(0, 'Memory');
+      break;
+
+    case "3":
+      ChangePlot(0, 'Network_io');
+      break;
+
+    case "4":
+      ChangePlot(0, 'CPU_util');
+      break;
+
+    case "5":
+      ChangePlot(0, 'CPU_temp');
+      break;
   }
 });

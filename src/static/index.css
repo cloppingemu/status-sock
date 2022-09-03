@@ -66,3 +66,14 @@ body {
 .hidden {
   display: none;
 }
+
+#footer {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  padding-left: 0.5em;
+  padding-bottom: 0.5em;
+  width: 100%;
+  background-color: var(--bg);
+  color: var(--text);
+}

@@ -5,10 +5,11 @@ import updators
 import asyncio
 import socketio
 
+from socket import gethostname
 
 REFRESH_PERIOD = 1  # second
 
-STATIC_FILES_DIR = f"{os.path.dirname(__file__)}/dist"
+STATIC_FILES_DIR = f"{os.path.dirname(__file__)}/static"
 
 ROOT_VIEW = "index.html"
 dist_html_targets = {
@@ -28,11 +29,12 @@ sio = socketio.AsyncServer(async_mode="asgi")
 app = socketio.ASGIApp(sio, static_files=dist_html_targets)
 
 
+up_time_checker = updators.UpTime()
 cpu_util_checker = updators.CpuUtil()
-mem_checker = updators.MemUtil()
 cpu_temp_checker = updators.CpuTemp()
-net_io_checker = updators.NetworkIo()
+mem_checker = updators.MemUtil()
 disk_io_checker = updators.DiskIo()
+net_io_checker = updators.NetworkIo()
 
 async def task():
   task.stopped = False
@@ -56,7 +58,6 @@ async def task():
       sio.sleep(REFRESH_PERIOD),
 
       sio.emit("status_update", {
-        "time": time.time() - task.time,
         "CPU_Util": cpu_util,
         "CPU_Temp": cpu_temp,
         "Memory": mem_util,
@@ -64,12 +65,10 @@ async def task():
         "Disk_IO": disk_io,
       }),
     )
-    task.time = time.time()
   task.stopped = True
   print("Exiting background task")
 task.go = False
 task.stopped = True
-task.time = time.time()
 
 
 num_clients = 0
@@ -82,7 +81,8 @@ async def on_connect(sid, _):
   num_clients = num_clients + 1
   print(sid, "connected; Active:", num_clients)
 
-  cpu_util, cpu_temp, mem_util, net_io, disk_io, *_ = await asyncio.gather(
+  up_time, cpu_util, cpu_temp, mem_util, net_io, disk_io, *_ = await asyncio.gather(
+    up_time_checker.refresh(),
     cpu_util_checker.refresh(),
     cpu_temp_checker.refresh(),
     mem_checker.total(),
@@ -95,12 +95,14 @@ async def on_connect(sid, _):
   )
 
   await sio.emit("status_init", {
+    "Up_Time": up_time,
     "CPU_Util": cpu_util,
     "CPU_Temp": cpu_temp,
     "Memory": mem_util,
     "Network_IO": net_io,
     "Disk_IO": disk_io,
     "Refresh_Period": REFRESH_PERIOD,
+    "Hostname": gethostname(),
   }, to=sid)
 
   if not task.go:

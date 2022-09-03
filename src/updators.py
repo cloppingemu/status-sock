@@ -1,3 +1,4 @@
+import time
 import psutil
 import asyncio
 
@@ -68,13 +69,24 @@ class DiskIo:
     return net_io
 
 
+class UpTime:
+  def __init__(self):
+    self._boot_time = psutil.boot_time()
+
+  async def refresh(self):
+    return int(time.time() - self._boot_time)
+
+
 async def main():
   mem_util = MemUtil()
   cpu_util = CpuUtil()
   cpu_temp = CpuTemp()
   net_io = NetworkIo()
   disk_io = DiskIo()
-  print("CPU-util test (%util)",
+  up_time = UpTime()
+
+  print("UpTime (s)",
+        "CPU-util test (%util)",
         "CPU-temp test (°C)",
         "Mem-util test (B)",
         "Net IO test (Bps)",
@@ -82,6 +94,7 @@ async def main():
 
   for _ in range(5):
     *v, _ = await asyncio.gather(
+      up_time.refresh(),
       cpu_util.refresh(),
       cpu_temp.refresh(),
       mem_util.refresh(),

@@ -19,7 +19,7 @@
     <span id="heartbeat-indicator" class="heartbeat"> </span>
       <span id="client_count">
         Clients: <span id="active_client_count">1</span>;
-        Desync: <span id="active_desync">1</span> µs
+        Up Time<span id="host_uptime"></span>
       </span>
   </div>
 
@@ -36,6 +36,8 @@
       <span class="navigator-targets cpu-temp" onclick="ChangePlot(event, 'CPU_temp')">CPU Temp</span>
     </div>
   </div>
+
+  <div id="footer">Hostname</div>
 
   <script src="/index.js"></script>
 
