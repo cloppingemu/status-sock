@@ -208,14 +208,6 @@ function DiskSelect(disk) {
   if (trace == "Disk_io") {
     update_disk_io_trace();
 
-    if (layout_config.Disk_io.y_axis_max < 1) {
-      disk_io_unit = disk_io_unit === "GB" ? "MB" : disk_io_unit === "MB" ? "KB" : disk_io_unit === "KB" ? "B" : "B";
-      update_disk_io_trace();
-    } else if (layout_config.Disk_io.y_axis_max > 1024) {
-      disk_io_unit = disk_io_unit === "B" ? "KB" : disk_io_unit === "KB" ? "MB" : disk_io_unit === "MB" ? "GB" : "GB";
-      update_disk_io_trace();
-    }
-
     layout_config.Disk_io.y_axis_max = layout_config.Disk_io.y_axis_max * 1.25;
 
     layout.yaxis.range = [0, Math.max(1, layout_config.Disk_io.y_axis_max)];
