@@ -113,7 +113,7 @@ const layout = {
   title: {
     text: "CPU Temp",
     font: {
-      size: 25	
+      size: 25
     },
   },
   plot_bgcolor: '#fff',
@@ -204,6 +204,25 @@ if (window.matchMedia) {
 
 function DiskSelect(disk) {
   disk_to_show = disk;
+
+  if (trace == "Disk_io") {
+    update_disk_io_trace();
+
+    if (layout_config.Disk_io.y_axis_max < 1) {
+      disk_io_unit = disk_io_unit === "GB" ? "MB" : disk_io_unit === "MB" ? "KB" : disk_io_unit === "KB" ? "B" : "B";
+      update_disk_io_trace();
+    } else if (layout_config.Disk_io.y_axis_max > 1024) {
+      disk_io_unit = disk_io_unit === "B" ? "KB" : disk_io_unit === "KB" ? "MB" : disk_io_unit === "MB" ? "GB" : "GB";
+      update_disk_io_trace();
+    }
+
+    layout_config.Disk_io.y_axis_max = layout_config.Disk_io.y_axis_max * 1.25;
+
+    layout.yaxis.range = [0, Math.max(1, layout_config.Disk_io.y_axis_max)];
+    layout.yaxis.title = `Disk IO (${disk_io_unit}ps)`;
+
+    Plotly.redraw("Plot-Area");
+  }
 }
 
 
@@ -385,12 +404,12 @@ sio.on("status_init", (init) => {
 function update_disk_io_trace() {
   DiskIoTraces[0].y = disk_io[disk_to_show].read.map(v => v === null ? v : v/CONVERSION_FROM_B[disk_io_unit] / REFRESH_PERIOD);
   DiskIoTraces[1].y = disk_io[disk_to_show].write.map(v => v === null ? v : v/CONVERSION_FROM_B[disk_io_unit] / REFRESH_PERIOD);
-  
+
   DiskIoTraces[0].name = `R: ${DiskIoTraces[0].y[HISTORY_LAST].toFixed(1)} ${disk_io_unit}ps`;
   DiskIoTraces[1].name = `W: ${DiskIoTraces[1].y[HISTORY_LAST].toFixed(1)} ${disk_io_unit}ps`;
 
   layout_config.Disk_io.y_axis_max = Math.max(
-    ...DiskIoTraces[0].y, ...DiskIoTraces[1].y
+    0.8, ...DiskIoTraces[0].y, ...DiskIoTraces[1].y
   );
 }
 function update_Disk_io({Disk_IO}) {
@@ -400,6 +419,7 @@ function update_Disk_io({Disk_IO}) {
     disk_io[disk].write.splice(0, HISTORY_LAST, ...disk_io[disk].write.slice(1, HISTORY_LAST));
     disk_io[disk].write[HISTORY_LAST] = Disk_IO[disk].write;
   }
+
   update_disk_io_trace();
   if (layout_config.Disk_io.y_axis_max < 1) {
     disk_io_unit = disk_io_unit === "GB" ? "MB" : disk_io_unit === "MB" ? "KB" : disk_io_unit === "KB" ? "B" : "B";
@@ -408,7 +428,7 @@ function update_Disk_io({Disk_IO}) {
     disk_io_unit = disk_io_unit === "B" ? "KB" : disk_io_unit === "KB" ? "MB" : disk_io_unit === "MB" ? "GB" : "GB";
     update_disk_io_trace();
   }
-  layout_config.Disk_io.y_axis_max = layout_config.Disk_io.y_axis_max * 1.25
+  layout_config.Disk_io.y_axis_max = Math.max(0.8, layout_config.Disk_io.y_axis_max) * 1.25;
 }
 
 function update_CPU_temp({CPU_Temp}) {
@@ -430,7 +450,7 @@ function update_CPU_util({CPU_Util}) {
     CpuUtilTraces[cpu_key].y.splice(0, HISTORY_LAST, ...CpuUtilTraces[cpu_key].y.slice(1, HISTORY_LAST));
     CpuUtilTraces[cpu_key].y[HISTORY_LAST] = CPU_Util[cpu_key];
   }
-  
+
   const cpu_util_av = (CPU_Util.reduce((a, b) => a - -b)/NUM_CPU_CORES);
   CpuUtilTraces[NUM_CPU_CORES].name = `CPU avg: ${cpu_util_av.toFixed(1)}%`;
   CpuUtilTraces[NUM_CPU_CORES].y.splice(0, HISTORY_LAST, ...CpuUtilTraces[NUM_CPU_CORES].y.slice(1, HISTORY_LAST));
@@ -498,7 +518,7 @@ function do_blink() {
   indicator_el.style.backgroundColor = heartbeat_colors[status_count%2];
   setTimeout(() => {
     status_count = !status_count;
-    indicator_el.style.backgroundColor = heartbeat_colors[status_count%2];      
+    indicator_el.style.backgroundColor = heartbeat_colors[status_count%2];
   }, REFRESH_PERIOD * 1000/2);
 
   host_uptime.innerText = formatTime(Up_Time);
@@ -558,31 +578,31 @@ sio.on("status_update", (status) => {
       case "CPU_temp":
         update_CPU_temp(status);
         break;
-  
+
       case "CPU_util":
         update_CPU_util(status);
         break;
-  
+
       case "Disk_io":
         update_Disk_io(status);
-        layout.yaxis.range = [0, Math.max(0.75, layout_config.Disk_io.y_axis_max)];
+        layout.yaxis.range = [0, Math.max(1, layout_config.Disk_io.y_axis_max)];
         layout.yaxis.title = `Disk IO (${disk_io_unit}ps)`;
         break;
-  
+
       case "Memory":
         update_Memory(status);
-        layout.yaxis.range = [0, Math.max(0.75, layout_config.Memory.y_axis_max)];
+        layout.yaxis.range = [0, Math.max(1, layout_config.Memory.y_axis_max)];
         layout.yaxis.title = `Util (${memory_unit})`;
         break;
-  
+
       case "Network_io":
         update_Neteork_io(status);
-        layout.yaxis.range = [0, Math.max(0.75, layout_config.Network_io.y_axis_max)];
+        layout.yaxis.range = [0, Math.max(1, layout_config.Network_io.y_axis_max)];
         layout.yaxis.title = `Net IO (${network_io_unit}ps)`;
         break;
     }
     Plotly.redraw("Plot-Area");
-  
+
     for (let resource of Object.keys(layout_config)) {
       if (resource !== trace) {
         layout_config[resource].updator(status);
@@ -598,6 +618,7 @@ document.onkeydown = ((event) => {
     case "1":
       if (trace == 'Disk_io') {
         disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + 1) % all_disks.length];
+        DiskSelect(disk_to_show);
         document.getElementById("disk-selector").value = disk_to_show;
       }
       ChangePlot(0, 'Disk_io');
