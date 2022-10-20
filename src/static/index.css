@@ -47,7 +47,7 @@ body {
   display: flex;
   flex-flow: row wrap;
   justify-content: space-evenly;
-  margin: 1em 1em 0 0;
+  margin: 0.5em 0.5em 0 0.5em;
 }
 .navigator-targets {
   flex-grow: 1;
