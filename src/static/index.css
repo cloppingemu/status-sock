@@ -50,13 +50,12 @@ body {
   margin: 0.5em 0.5em 0 0.5em;
 }
 .navigator-targets {
+  box-sizing: border-box;
   flex-grow: 1;
   text-align: center;
   padding: 0.5em;
-  /* margin-right: 1em; */
-  /* margin-left: 1em; */
-  border: 1px solid red;
 }
+
 
 .disk-io {
   display: flex;

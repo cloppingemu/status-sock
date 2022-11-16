@@ -164,6 +164,14 @@ const color_scheme_layout = {
   }
 }
 
+const eventNameMapping = {
+  "Disk_io": "Disk IO",
+  "Memory": "Memory",
+  "Network_io": "Network IO",
+  "CPU_util": "CPU Util",
+  "CPU_temp": "CPU Temp"
+}
+
 function ChangePlot(event, key) {
   if ((event != 0 && ["select", "option"].includes(event.target.nodeName.toLowerCase()))) {
     return;
@@ -172,7 +180,17 @@ function ChangePlot(event, key) {
   layout.title.text = layout_config[key].chart_title;
   layout.yaxis.title = layout_config[key].y_title;
   layout.yaxis.range[1] = layout_config[key].y_axis_max;
-  layout.legend.traceorder = layout_config[key].legend_traceorder
+  layout.legend.traceorder = layout_config[key].legend_traceorder;
+
+  for (element of document.getElementsByClassName("navigator-targets")) {
+    if (element.innerText == eventNameMapping[key]) {
+      element.style.border = "2px solid green";
+      element.style.boxShadow = "0px 0px 5px green";
+    } else {
+      element.style.border = "2px solid orangered";
+      element.style.boxShadow = "0px 0px 5px orangered";
+    }
+  }
 
   Plotly.newPlot("Plot-Area", Traces[key], layout, {
     staticPlot: true
@@ -612,28 +630,28 @@ sio.on("status_update", (status) => {
 document.onkeydown = ((event) => {
   switch (event.key) {
     case "1":
+      ChangePlot(0, 'CPU_util');
+      break;
+
+    case "2":
+      ChangePlot(0, 'CPU_temp');
+      break;
+
+    case "3":
+      ChangePlot(0, 'Memory');
+      break;
+
+    case "4":
+      ChangePlot(0, 'Network_io');
+      break;
+  
+    case "5":
       if (trace == 'Disk_io') {
         disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + 1) % all_disks.length];
         DiskSelect(disk_to_show);
         document.getElementById("disk-selector").value = disk_to_show;
       }
       ChangePlot(0, 'Disk_io');
-      break;
-
-    case "2":
-      ChangePlot(0, 'Memory');
-      break;
-
-    case "3":
-      ChangePlot(0, 'Network_io');
-      break;
-
-    case "4":
-      ChangePlot(0, 'CPU_util');
-      break;
-
-    case "5":
-      ChangePlot(0, 'CPU_temp');
       break;
   }
 });

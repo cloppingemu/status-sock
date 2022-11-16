@@ -25,14 +25,14 @@
   <div class="container">
     <div id="Plot-Area"></div>
     <div id="navigator" class="navigator">
+      <span class="navigator-targets cpu-util" onclick="ChangePlot(event, 'CPU_util')">CPU Util</span>
+      <span class="navigator-targets cpu-temp" onclick="ChangePlot(event, 'CPU_temp')">CPU Temp</span>
+      <span class="navigator-targets memory" onclick="ChangePlot(event, 'Memory')">Memory</span>
+      <span class="navigator-targets network" onclick="ChangePlot(event, 'Network_io')">Network IO</span>
       <span class="navigator-targets disk-io" onclick="ChangePlot(event, 'Disk_io')">
         <span>Disk IO</span>
         <select name="disk-selector" id="disk-selector" onchange="DiskSelect(this.value)"></select>  
       </span>
-      <span class="navigator-targets memory" onclick="ChangePlot(event, 'Memory')">Memory</span>
-      <span class="navigator-targets network" onclick="ChangePlot(event, 'Network_io')">Network IO</span>
-      <span class="navigator-targets cpu-util" onclick="ChangePlot(event, 'CPU_util')">CPU Util</span>
-      <span class="navigator-targets cpu-temp" onclick="ChangePlot(event, 'CPU_temp')">CPU Temp</span>
     </div>
   </div>
 
