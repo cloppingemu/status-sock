@@ -627,31 +627,50 @@ sio.on("status_update", (status) => {
 
 // ----------------------------------------------------
 
+let view = 1;
+const views = [
+  'CPU_util',
+  'CPU_temp',
+  'Memory',
+  'Network_io',
+  'Disk_io'
+]
+
 document.onkeydown = ((event) => {
   switch (event.key) {
     case "1":
+      view = 1;
       ChangePlot(0, 'CPU_util');
       break;
 
     case "2":
+      view = 2;
       ChangePlot(0, 'CPU_temp');
       break;
 
     case "3":
+      view = 3;
       ChangePlot(0, 'Memory');
       break;
 
     case "4":
+      view = 4;
       ChangePlot(0, 'Network_io');
       break;
   
     case "5":
+      view = 5;
       if (trace == 'Disk_io') {
         disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + 1) % all_disks.length];
         DiskSelect(disk_to_show);
         document.getElementById("disk-selector").value = disk_to_show;
       }
       ChangePlot(0, 'Disk_io');
+      break;
+
+    case "`":
+      view = (view % views.length) + 1;
+      ChangePlot(0, views[view-1]);
       break;
   }
 });
