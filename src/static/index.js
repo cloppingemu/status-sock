@@ -672,5 +672,11 @@ document.onkeydown = ((event) => {
       view = (view % views.length) + 1;
       ChangePlot(0, views[view-1]);
       break;
+
+    case "~":
+      view = ((view - 1) % views.length);
+      view = view ? view : views.length;
+      ChangePlot(0, views[(view-1)]);
+      break;
   }
 });
