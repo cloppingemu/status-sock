@@ -176,6 +176,7 @@ function ChangePlot(event, key) {
   if ((event != 0 && ["select", "option"].includes(event.target.nodeName.toLowerCase()))) {
     return;
   }
+  view = views.indexOf(key)+1;
   trace = key;
   layout.title.text = layout_config[key].chart_title;
   layout.yaxis.title = layout_config[key].y_title;
