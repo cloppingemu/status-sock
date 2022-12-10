@@ -220,6 +220,12 @@ if (window.matchMedia) {
   };
 }
 
+function DiskSelectFromMenu(disk){
+  DiskSelect(disk);
+  if (trace == "Disk_io") {
+    ChangePlot(0, trace);
+  }
+}
 
 function DiskSelect(disk) {
   disk_to_show = disk;
