@@ -266,7 +266,7 @@ sio.on("client_count", (host) => {
 });
 
 sio.on("status_init", (init) => {
-  document.title = `Status: ${init.Hostname}`;
+  document.title = `${init.Hostname}`;
   document.getElementById("footer").innerText = `Hostname: ${init.Hostname}`;
 
   NUM_CPU_CORES = init.CPU_Util.length;
