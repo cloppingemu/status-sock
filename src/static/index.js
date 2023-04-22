@@ -674,6 +674,16 @@ document.onkeydown = ((event) => {
       }
       ChangePlot(0, 'Disk_io');
       break;
+  
+    case "%":
+      view = 5;
+      if (trace == 'Disk_io') {
+        disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + all_disks.length - 1) % all_disks.length];
+        DiskSelect(disk_to_show);
+        document.getElementById("disk-selector").value = disk_to_show;
+      }
+      ChangePlot(0, 'Disk_io');
+      break;
 
     case "`":
       view = (view % views.length) + 1;
