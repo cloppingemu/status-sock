@@ -1,13 +1,32 @@
 :root {
-  --text: #000;
+  --text: #111;
   --bg: #fff;
+  --ghost: #444;
+  --active-cell: #ddd;
+  --inactive-cell: #fefefe;
+  --active-border: #111;
+  --inactive-border: #111;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #fff;
+    --text: #eee;
     --bg: #000;
+    --ghost: #bbb;
+    --active-cell: #333;
+    --inactive-cell: #101010;
+    --active-border: #eee;
+    --inactive-border: #eee;
   }
+}
+
+.ghost {
+  font-size: small;
+  color: var(--ghost);
+  font-weight: bold;
+}
+.ghostUnit {
+  font-size: smaller;
 }
 
 body {
@@ -57,7 +76,7 @@ body {
 }
 
 
-.disk-io {
+.disk-io-nav {
   display: flex;
   justify-content: space-evenly;
 }
@@ -68,11 +87,12 @@ body {
 
 #footer {
   position: fixed;
-  left: 0;
+  right: 0;
   bottom: 0;
-  padding-left: 0.5em;
-  padding-bottom: 0.5em;
+  padding-right: 0.25em;
+  padding-bottom: 0.25em;
   width: 100%;
   background-color: var(--bg);
   color: var(--text);
+  text-align: right;
 }

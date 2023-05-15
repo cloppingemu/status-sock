@@ -2,6 +2,10 @@ let NUM_CPU_PACKAGES = 2;
 let NUM_CPU_CORES = 1;
 let MAX_RAM_SIZE = 1;
 
+const LINE_SHAPE = 'spline';  // 'linear';
+const LINE_SMOOTHING = 1.0;   // Has an effect only if `shape` is set to "spline". Sets the amount of smoothing.
+                              // "0" corresponds to no smoothing (equivalent to a "linear" shape).
+
 const HISTORY_TIME = 31;  // seconds
 const CONVERSION_FROM_B = {
   B: 1,
@@ -34,6 +38,14 @@ let HISTORY_LAST = HISTORY_SIZE - 1;
 //   '#17becf'   // blue-teal
 // ]
 
+
+function clip10(c, n) {
+  if (c > 10 || n == 0) {
+    return Math.round(c);
+  } else {
+    return (Math.round(c * 10**n) * 10**-n).toFixed(n);
+  }
+}
 
 // ----------------------------------------------------
 
@@ -165,11 +177,11 @@ const color_scheme_layout = {
 }
 
 const eventNameMapping = {
-  "Disk_io": "Disk IO",
-  "Memory": "Memory",
-  "Network_io": "Network IO",
-  "CPU_util": "CPU Util",
-  "CPU_temp": "CPU Temp"
+  "CPU_util": "cpu-util",
+  "CPU_temp": "cpu-temp",
+  "Memory": "memory",
+  "Network_io": "network",
+  "Disk_io": "disk-io",
 }
 
 function ChangePlot(event, key) {
@@ -183,13 +195,15 @@ function ChangePlot(event, key) {
   layout.yaxis.range[1] = layout_config[key].y_axis_max;
   layout.legend.traceorder = layout_config[key].legend_traceorder;
 
-  for (element of document.getElementsByClassName("navigator-targets")) {
-    if (element.innerText == eventNameMapping[key]) {
-      element.style.border = "2px solid green";
-      element.style.boxShadow = "0px 0px 5px green";
+  for (const element of document.getElementsByClassName("navigator-targets")) {
+    if (element.classList.contains(eventNameMapping[key])) {
+      element.style.border = "1px solid var(--active-border)";
+      // element.style.boxShadow = "0px 0px 2px var(--active-border)";
+      element.style.backgroundColor = "var(--active-cell)";
     } else {
-      element.style.border = "2px solid orangered";
-      element.style.boxShadow = "0px 0px 5px orangered";
+      element.style.border = "1px solid var(--inactive-border)";
+      // element.style.boxShadow = "0px 0px 0px var(--inactive-border)";
+      element.style.backgroundColor = "var(--inactive-cell)";
     }
   }
 
@@ -291,6 +305,8 @@ sio.on("status_init", (init) => {
       y: Array(HISTORY_SIZE).fill(null),
       name: "RAM",
       line: {
+        shape: LINE_SHAPE,
+        smoothing: LINE_SMOOTHING,
         width: 3
       }
     },
@@ -299,6 +315,8 @@ sio.on("status_init", (init) => {
       y: Array(HISTORY_SIZE).fill(null),
       name: "Swap",
       line: {
+        shape: LINE_SHAPE,
+        smoothing: LINE_SMOOTHING,
         width: 3
       },
     }
@@ -310,6 +328,8 @@ sio.on("status_init", (init) => {
       y: Array(HISTORY_SIZE).fill(null),
       name: "CPU avg",
       line: {
+        shape: LINE_SHAPE,
+        smoothing: LINE_SMOOTHING,
         width: 3,
         color: "#000"
       },
@@ -320,6 +340,8 @@ sio.on("status_init", (init) => {
         y: Array(HISTORY_SIZE).fill(null),
         name: `Core ${i}`,
         line: {
+          shape: LINE_SHAPE,
+          smoothing: LINE_SMOOTHING,
           width: 1
         },
       };
@@ -333,6 +355,8 @@ sio.on("status_init", (init) => {
         y: Array(HISTORY_SIZE).fill(null),
         name: `Core ${i}`,
         line: {
+          shape: LINE_SHAPE,
+          smoothing: LINE_SMOOTHING,
           width: 1
         },
         showlegend: false,
@@ -343,6 +367,8 @@ sio.on("status_init", (init) => {
       y: Array(HISTORY_SIZE).fill(null),
       name: "Core pkg",
       line: {
+        shape: LINE_SHAPE,
+        smoothing: LINE_SMOOTHING,
         width: 3,
         color: "#000"
       },
@@ -356,6 +382,8 @@ sio.on("status_init", (init) => {
       y: Array(HISTORY_SIZE).fill(null),
       name: `Read`,
       line: {
+        shape: LINE_SHAPE,
+        smoothing: LINE_SMOOTHING,
         width: 3,
       },
     },
@@ -364,6 +392,8 @@ sio.on("status_init", (init) => {
       y: Array(HISTORY_SIZE).fill(null),
       name: `Write`,
       line: {
+        shape: LINE_SHAPE,
+        smoothing: LINE_SMOOTHING,
         width: 3,
       },
     }
@@ -377,18 +407,22 @@ sio.on("status_init", (init) => {
    {
      x: time,
      y: Array(HISTORY_SIZE).fill(null),
-     name: "TX",
+     name: "Tx",
      line: {
-       width: 3
+        shape: LINE_SHAPE,
+        smoothing: LINE_SMOOTHING,
+        width: 3
      },
      showlegend: true,
    },
    {
      x: time,
      y: Array(HISTORY_SIZE).fill(null),
-     name: "RX",
+     name: "Rx",
      line: {
-       width: 3
+        shape: LINE_SHAPE,
+        smoothing: LINE_SMOOTHING,
+        width: 3
      },
      showlegend: true,
    },
@@ -434,6 +468,7 @@ function update_disk_io_trace() {
     0.8, ...DiskIoTraces[0].y, ...DiskIoTraces[1].y
   );
 }
+const DiskIoGhost = document.getElementById("disk-ghost");
 function update_Disk_io({Disk_IO}) {
   for (let disk of Object.keys(Disk_IO).sort()) {
     disk_io[disk].read.splice(0, HISTORY_LAST, ...disk_io[disk].read.slice(1, HISTORY_LAST));
@@ -451,8 +486,14 @@ function update_Disk_io({Disk_IO}) {
     update_disk_io_trace();
   }
   layout_config.Disk_io.y_axis_max = Math.max(0.8, layout_config.Disk_io.y_axis_max) * 1.25;
+
+  const readText = `R: ${clip10(Disk_IO[disk_to_show].read / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
+  const writeText = `W: ${clip10(Disk_IO[disk_to_show].write / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
+  const ghostTxt = Disk_IO[disk_to_show].read == 0 && Disk_IO[disk_to_show].write == 0 ? `Idle` : Disk_IO[disk_to_show].read > Disk_IO[disk_to_show].write ? readText : writeText;
+  DiskIoGhost.innerText = ghostTxt;
 }
 
+const CpuTempGhost = document.getElementById("cpu_temp-ghost");
 function update_CPU_temp({CPU_Temp}) {
   const pkg_key = Object.keys(CPU_Temp).filter(c => !c.startsWith("Core"))[0];
   CpuTempTraces[NUM_CPU_PACKAGES].name = `Core pkg: ${CPU_Temp[pkg_key]}° C`;
@@ -463,8 +504,10 @@ function update_CPU_temp({CPU_Temp}) {
     CpuTempTraces[cpu_key].y.splice(0, HISTORY_LAST, ...CpuTempTraces[cpu_key].y.slice(1, HISTORY_LAST));
     CpuTempTraces[cpu_key].y[HISTORY_LAST] = CPU_Temp[`Core ${cpu_key}`];
   }
+  CpuTempGhost.innerText = `${CPU_Temp[pkg_key]}° C`;
 }
 
+const CpuUtilGhost = document.getElementById("cpu_util-ghost");
 function update_CPU_util({CPU_Util}) {
   for (let cpu_key in Array(NUM_CPU_CORES).fill(0)) {
     CpuUtilTraces[cpu_key].name = `Core ${cpu_key}: ${CPU_Util[cpu_key].toFixed(1)}%`;
@@ -481,8 +524,9 @@ function update_CPU_util({CPU_Util}) {
   const max_cpu_util = Object.keys(CPU_Util).reduce((a, b) => {
     return CPU_Util[a] > CPU_Util[b] ? a : b;
   });
-
   CpuUtilTraces[max_cpu_util].showlegend = true;
+
+  CpuUtilGhost.innerText = `${clip10(cpu_util_av, 1)}%`;
 }
 
 function update_memory_trace() {
@@ -492,6 +536,7 @@ function update_memory_trace() {
   MemTraces[1].name = `Swap: ${MemTraces[1].y[HISTORY_LAST].toFixed(1)} ${memory_unit}`;
   layout_config.Memory.y_axis_max = Math.max(...mem_util.ram, ...mem_util.swap) / CONVERSION_FROM_B[memory_unit];
 }
+const MemoryUtilGhost = document.getElementById("mem-ghost");
 function update_Memory({Memory}) {
   mem_util.ram.splice(0, HISTORY_LAST, ...mem_util.ram.slice(1, HISTORY_LAST));
   mem_util.ram[HISTORY_LAST] = Memory.RAM;
@@ -506,6 +551,10 @@ function update_Memory({Memory}) {
     update_memory_trace();
   }
   layout_config.Memory.y_axis_max = layout_config.Memory.y_axis_max * 1.25;
+
+  let MemUtilGhostText = mem_util.ram[HISTORY_LAST] / CONVERSION_FROM_B[memory_unit];
+  MemUtilGhostText = MemUtilGhostText < 10 ? MemUtilGhostText.toFixed(1) : MemUtilGhostText.toFixed(0);
+  MemoryUtilGhost.innerText = `${MemUtilGhostText}${memory_unit}`;
 }
 
 function update_network_io_trace() {
@@ -518,6 +567,7 @@ function update_network_io_trace() {
     ...NetworkIoTraces[1].y,
   );
 }
+const NetGhost = document.getElementById("net-ghost");
 function update_Neteork_io({Network_IO}) {
   network_io.tx.splice(0, HISTORY_LAST, ...network_io.tx.slice(1, HISTORY_LAST));
   network_io.rx.splice(0, HISTORY_LAST, ...network_io.rx.slice(1, HISTORY_LAST));
@@ -531,7 +581,12 @@ function update_Neteork_io({Network_IO}) {
     network_io_unit = network_io_unit === "B" ? "KB" : network_io_unit === "KB" ? "MB" : network_io_unit === "MB" ? "GB" : "GB";
     update_network_io_trace();
   }
-  layout_config.Network_io.y_axis_max = layout_config.Network_io.y_axis_max * 1.25
+  layout_config.Network_io.y_axis_max = layout_config.Network_io.y_axis_max * 1.25;
+
+  const rxGhost = clip10(network_io.rx[HISTORY_LAST] / CONVERSION_FROM_B[network_io_unit], 1);
+  const txGhost = clip10(network_io.tx[HISTORY_LAST] / CONVERSION_FROM_B[network_io_unit], 1);
+  const ghostTxt = rxGhost > txGhost ? `↓ ${rxGhost}` : `↑ ${txGhost}`;
+  NetGhost.innerText = `${ghostTxt}${network_io_unit}ps`;
 }
 
 function do_blink() {
@@ -589,8 +644,8 @@ function formatTime(uptime) {
 }
 
 sio.on("status_update", (status) => {
+  status_count = false;
   do_blink();
-  // console.log(status);
 
   isDarkMode = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
 
@@ -665,7 +720,7 @@ document.onkeydown = ((event) => {
       view = 4;
       ChangePlot(0, 'Network_io');
       break;
-  
+
     case "5":
       view = 5;
       if (trace == 'Disk_io') {
@@ -675,7 +730,7 @@ document.onkeydown = ((event) => {
       }
       ChangePlot(0, 'Disk_io');
       break;
-  
+
     case "%":
       view = 5;
       if (trace == 'Disk_io') {

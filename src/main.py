@@ -7,7 +7,7 @@ import socketio
 
 from socket import gethostname
 
-REFRESH_PERIOD = 1  # second
+REFRESH_PERIOD = 1 # second
 
 STATIC_FILES_DIR = f"{os.path.dirname(__file__)}/static"
 

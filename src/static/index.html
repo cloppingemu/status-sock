@@ -11,9 +11,11 @@
 
   <title>Sock Status</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.12.1/plotly.min.js" integrity="sha512-oDU2mJjVXWGsn7nPQLJdsW5x5SHpL4h+6aC6iTp8whKFBV/zTAAe80W5oCF73lAfYh0Q9QQdvJvtu2qHOVmr1Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script>window.Plotly || console.log("Fallback on plotly") & document.write('<script src="/plotly.2.12.1.min.js">\x3C/script>')</script>
 </head>
 <body>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.js" integrity="sha512-/xb5+PNOA079FJkngKI2jvID5lyiqdHXaUUcfmzE0X0BdpkgzIWHC59LOG90a2jDcOyRsd1luOr24UCCAG8NNw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.min.js" integrity="sha512-pxLMWs4E33rW9tdIhovcCp2dCo9k4Q8eHw7CETjyjdXf4aX6wvsEBq+KdOJJRFALr6FxNoXx+jksgbE74TZjEw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script>window.io || console.log("Fallback on socket.io") &  document.write('<script src="/socket.io.4.5.0.min.js">\x3C/script>')</script>
   <div id="header">
     <span id="heartbeat-indicator" class="heartbeat"> </span>
       <span id="client_count">
@@ -25,13 +27,16 @@
   <div class="container">
     <div id="Plot-Area"></div>
     <div id="navigator" class="navigator">
-      <span class="navigator-targets cpu-util" onclick="ChangePlot(event, 'CPU_util')">CPU Util</span>
-      <span class="navigator-targets cpu-temp" onclick="ChangePlot(event, 'CPU_temp')">CPU Temp</span>
-      <span class="navigator-targets memory" onclick="ChangePlot(event, 'Memory')">Memory</span>
-      <span class="navigator-targets network" onclick="ChangePlot(event, 'Network_io')">Network IO</span>
+      <span class="navigator-targets cpu-util" onclick="ChangePlot(event, 'CPU_util')">CPU Util<br /><span class="ghost" id="cpu_util-ghost">-%</span></span>
+      <span class="navigator-targets cpu-temp" onclick="ChangePlot(event, 'CPU_temp')">CPU Temp<br /><span class="ghost" id="cpu_temp-ghost">- °C</span></span>
+      <span class="navigator-targets memory" onclick="ChangePlot(event, 'Memory')">Memory<br /><span class="ghost" id="mem-ghost">0b</span></span>
+      <span class="navigator-targets network" onclick="ChangePlot(event, 'Network_io')">Network IO<br /><span class="ghost" id="net-ghost">0bps</span></span>
       <span class="navigator-targets disk-io" onclick="ChangePlot(event, 'Disk_io')">
-        <span>Disk IO</span>
-        <select name="disk-selector" id="disk-selector" onchange="DiskSelectFromMenu(this.value)"></select>  
+        <span class="disk-io-nav">
+          <span>Disk IO</span>
+          <select name="disk-selector" id="disk-selector" onchange="DiskSelectFromMenu(this.value)"></select>  
+        </span>
+        <span class="ghost" id="disk-ghost">0bps</span>
       </span>
     </div>
   </div>
