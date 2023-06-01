@@ -238,6 +238,9 @@ if (window.matchMedia) {
 
 function SensorSelectFromMenu(sensor){
   SensorSelect(sensor);
+  if (trace == "CPU_temp") {
+    ChangePlot(0, trace);
+  }
 }
 
 function SensorSelect(sensor){
@@ -248,7 +251,7 @@ function SensorSelect(sensor){
     return {
       x: Object.keys(Array(HISTORY_SIZE).fill(null)).map(v => v*REFRESH_PERIOD).reverse(),
       y: Array(HISTORY_SIZE).fill(null),
-      name: `${sensor_to_show}-{i}`,
+      name: `${sensor_to_show} ${i}`,
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
@@ -380,7 +383,7 @@ sio.on("status_init", (init) => {
     return {
       x: time,
       y: Array(HISTORY_SIZE).fill(null),
-      name: `${sensor_to_show}-{i}`,
+      name: `${sensor_to_show} ${i}`,
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
