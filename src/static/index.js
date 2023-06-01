@@ -104,10 +104,12 @@ let MemTraces = [ ];
 
 let CpuUtilTraces = [ ];
 
+let sensor_to_plot = "cpu_thermal";
+const temp_sensors = { };
 let CpuTempTraces = [ ];
 
-const all_disks = [];
-const disk_io = {};
+const all_disks = [ ];
+const disk_io = { };
 let DiskIoTraces = [ ];
 
 let network_io = { };
@@ -213,7 +215,7 @@ function ChangePlot(event, key) {
 }
 
 function UpdatePlotColors(scheme) {
-  CpuTempTraces[NUM_CPU_PACKAGES].line.color = isDarkMode ? "#fff" : "#000";
+  // CpuTempTraces[0].line.color = isDarkMode ? "#fff" : "#000";
   CpuUtilTraces[NUM_CPU_CORES].line.color = isDarkMode ? "#fff" : "#000";
 
   layout.plot_bgcolor = color_scheme_layout[scheme].plot_bgcolor;
@@ -227,11 +229,19 @@ function UpdatePlotColors(scheme) {
 if (window.matchMedia) {
   window.matchMedia("(prefers-color-scheme: dark)").onchange = (change) => {
     isDarkMode = change.matches;
-    CpuTempTraces[NUM_CPU_PACKAGES].line.color = isDarkMode ? "#fff" : "#000";
+    // CpuTempTraces[0].line.color = isDarkMode ? "#fff" : "#000";
     CpuUtilTraces[NUM_CPU_CORES].line.color = isDarkMode ? "#fff" : "#000";
     UpdatePlotColors(isDarkMode ? "dark" : "light");
     Plotly.redraw("Plot-Area");
   };
+}
+
+function SensorSelectFromMenu(sensor){
+  SensorSelect(sensor);
+}
+
+function SensorSelect(sensor){
+  sensor_to_plot = sensor;
 }
 
 function DiskSelectFromMenu(disk){
@@ -284,7 +294,7 @@ sio.on("status_init", (init) => {
   document.getElementById("footer").innerText = `Hostname: ${init.Hostname}`;
 
   NUM_CPU_CORES = init.CPU_Util.length;
-  NUM_CPU_PACKAGES = Object.keys(init.CPU_Temp).filter(v => v.startsWith("Core")).length;
+  NUM_CPU_PACKAGES = Object.keys(init.CPU_Temp).length;
 
   disk_to_show = Object.keys(init.Disk_IO).sort()[0];
   document.getElementById("disk-selector").innerHTML = "";
@@ -348,21 +358,8 @@ sio.on("status_init", (init) => {
     })
   ].reverse();
 
-  CpuTempTraces = [
-    ...Array.from(Array(NUM_CPU_PACKAGES).keys(), i => {
-      return {
-        x: time,
-        y: Array(HISTORY_SIZE).fill(null),
-        name: `Core ${i}`,
-        line: {
-          shape: LINE_SHAPE,
-          smoothing: LINE_SMOOTHING,
-          width: 1
-        },
-        showlegend: false,
-      };
-    }),
-    {
+  CpuTempTraces = [...Array.from(Array(NUM_CPU_PACKAGES).keys(), i => {
+    return {
       x: time,
       y: Array(HISTORY_SIZE).fill(null),
       name: "Core pkg",
@@ -370,11 +367,12 @@ sio.on("status_init", (init) => {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
         width: 3,
-        color: "#000"
+        // color: "#000"
       },
-      showlegend: true,
-    },
-  ];
+      showlegend: true
+    };
+  })];
+
 
   DiskIoTraces = [
     {
@@ -493,8 +491,21 @@ function update_Disk_io({Disk_IO}) {
   DiskIoGhost.innerText = ghostTxt;
 }
 
-const CpuTempGhost = document.getElementById("cpu_temp-ghost");
+// const CpuTempGhost = document.getElementById("cpu_temp-ghost");
 function update_CPU_temp({CPU_Temp}) {
+  const current_sensors = Object.keys(temp_sensors);
+  Object.keys(CPU_Temp).map((sensor) => {
+    if (current_sensors.includes(sensor)) {
+      temp_sensors[sensor].splice(0, HISTORY_LAST, ...temp_sensors[sensor].slice(1, HISTORY_LAST));
+    } else {
+      temp_sensors[sensor] = Array(HISTORY_SIZE).fill(null);
+    }
+    const av_temp = CPU_Temp[sensor].reduce((a,b) => a+b) / CPU_Temp[sensor].length;
+    temp_sensors[sensor][HISTORY_LAST] = av_temp;
+  });
+  CpuTempTraces[0].y = temp_sensors[sensor_to_plot];
+  console.log(CpuTempTraces);
+/*
   const pkg_key = Object.keys(CPU_Temp).filter(c => !c.startsWith("Core"))[0];
   CpuTempTraces[NUM_CPU_PACKAGES].name = `Core pkg: ${CPU_Temp[pkg_key]}° C`;
   CpuTempTraces[NUM_CPU_PACKAGES].y.splice(0, HISTORY_LAST, ...CpuTempTraces[NUM_CPU_PACKAGES].y.slice(1, HISTORY_LAST));
@@ -505,6 +516,7 @@ function update_CPU_temp({CPU_Temp}) {
     CpuTempTraces[cpu_key].y[HISTORY_LAST] = CPU_Temp[`Core ${cpu_key}`];
   }
   CpuTempGhost.innerText = `${CPU_Temp[pkg_key]}° C`;
+*/
 }
 
 const CpuUtilGhost = document.getElementById("cpu_util-ghost");
@@ -708,17 +720,17 @@ document.onkeydown = ((event) => {
 
     case "2":
       view = 2;
-      ChangePlot(0, 'CPU_temp');
+      ChangePlot(0, 'Memory');
       break;
 
     case "3":
       view = 3;
-      ChangePlot(0, 'Memory');
+      ChangePlot(0, 'Network_io');
       break;
 
     case "4":
       view = 4;
-      ChangePlot(0, 'Network_io');
+      ChangePlot(0, 'CPU_temp');
       break;
 
     case "5":

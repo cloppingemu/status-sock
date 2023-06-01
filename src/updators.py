@@ -2,6 +2,8 @@ import time
 import psutil
 import asyncio
 
+from string import digits
+
 
 class CpuUtil:
   async def refresh(self):
@@ -28,8 +30,8 @@ class MemUtil:
 class CpuTemp:
   async def refresh(self):
     return {
-      v.label: v.current
-      for v in psutil.sensors_temperatures()['coretemp']
+      k: [s.current for s in v]
+      for k, v in psutil.sensors_temperatures().items()
     }
 
 
@@ -50,9 +52,13 @@ class NetworkIo:
 
 class DiskIo:
   def __init__(self):
-    self._last = psutil.disk_io_counters(perdisk=True)
+    self.register()
 
-  nvme_disks = [f"nvme0n{v}" for v in range(10)]
+  def register(self):
+    self._last = psutil.disk_io_counters(perdisk=True)
+    self._disks = [disk for disk in self._last if disk.isalpha() \
+                            or disk.rstrip(digits).endswith("mmcblk") \
+                            or disk.rstrip(digits).endswith("nvme0n")]
 
   async def refresh(self):
     """
@@ -63,7 +69,7 @@ class DiskIo:
       disk: {
         "read": io[disk].read_bytes - self._last[disk].read_bytes,
         "write": io[disk].write_bytes - self._last[disk].write_bytes,
-      } for disk in self._last if disk.isalpha() or disk in self.nvme_disks
+      } for disk in self._disks
     }
     self._last = io
     return net_io
@@ -92,7 +98,7 @@ async def main():
         "Net IO test (Bps)",
         "Disk IO test (Bps)", sep="\t")
 
-  for _ in range(5):
+  for _ in range(10):
     *v, _ = await asyncio.gather(
       up_time.refresh(),
       cpu_util.refresh(),
@@ -101,7 +107,7 @@ async def main():
       net_io.refresh(),
       disk_io.refresh(),
 
-      asyncio.sleep(1),
+      asyncio.sleep(0.25),
     )
     print("\t".join(map(str, v)))
 

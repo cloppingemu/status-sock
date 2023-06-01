@@ -28,9 +28,18 @@
     <div id="Plot-Area"></div>
     <div id="navigator" class="navigator">
       <span class="navigator-targets cpu-util" onclick="ChangePlot(event, 'CPU_util')">CPU Util<br /><span class="ghost" id="cpu_util-ghost">-%</span></span>
-      <span class="navigator-targets cpu-temp" onclick="ChangePlot(event, 'CPU_temp')">CPU Temp<br /><span class="ghost" id="cpu_temp-ghost">- °C</span></span>
       <span class="navigator-targets memory" onclick="ChangePlot(event, 'Memory')">Memory<br /><span class="ghost" id="mem-ghost">0b</span></span>
-      <span class="navigator-targets network" onclick="ChangePlot(event, 'Network_io')">Network IO<br /><span class="ghost" id="net-ghost">0bps</span></span>
+      <span class="navigator-targets network" onclick="ChangePlot(event, 'Network_io')">Net IO<br /><span class="ghost" id="net-ghost">0bps</span></span>
+      <span class="navigator-targets cpu-temp" onclick="ChangePlot(event, 'CPU_temp')">
+
+        <span>Temps</span> <br />
+        <select name="sensor-selector" id="sensor-selector" onchange="SensorSelectFromMenu(this.value)">
+          <option value="cpu_thermal0">cpu thermal 0</option>
+          <option value="cpu_thermal1">cpu thermal 1</option>
+        </select>
+
+        
+      </span>
       <span class="navigator-targets disk-io" onclick="ChangePlot(event, 'Disk_io')">
         <span class="disk-io-nav">
           <span>Disk IO</span>
