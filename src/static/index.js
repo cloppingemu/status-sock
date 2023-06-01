@@ -242,6 +242,21 @@ function SensorSelectFromMenu(sensor){
 
 function SensorSelect(sensor){
   sensor_to_show = sensor;
+
+  CpuTempTraces = [...Array.from(Array(Object.keys(temp_sensors[sensor_to_show][HISTORY_LAST]).length).keys(), i => {
+    console.log(i);
+    return {
+      x: Object.keys(Array(HISTORY_SIZE).fill(null)).map(v => v*REFRESH_PERIOD).reverse(),
+      y: Array(HISTORY_SIZE).fill(null),
+      name: `${sensor_to_show}-{i}`,
+      line: {
+        shape: LINE_SHAPE,
+        smoothing: LINE_SMOOTHING,
+        width: temp_sensors[sensor_to_show].length <= 2 ? 3 : 1
+      },
+      showlegend: true
+    };
+  })];
 }
 
 function DiskSelectFromMenu(disk){
@@ -365,7 +380,7 @@ sio.on("status_init", (init) => {
     return {
       x: time,
       y: Array(HISTORY_SIZE).fill(null),
-      name: `${sensor_to_show}`,
+      name: `${sensor_to_show}-{i}`,
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
@@ -517,6 +532,7 @@ function update_CPU_temp({CPU_Temp}) {
   for (let i in CpuTempTraces) {
     CpuTempTraces[i].y = temp_sensors[sensor_to_show].map(s => s ? s[i] : null);
   }
+  console.log(temp_sensors);
 
 //  console.log(temp_sensors[sensor_to_show].map(s => s ? s[0] : null));
 /*
