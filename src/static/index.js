@@ -104,7 +104,7 @@ let MemTraces = [ ];
 
 let CpuUtilTraces = [ ];
 
-let sensor_to_plot = "cpu_thermal";
+let sensor_to_show;
 const temp_sensors = { };
 let CpuTempTraces = [ ];
 
@@ -241,7 +241,7 @@ function SensorSelectFromMenu(sensor){
 }
 
 function SensorSelect(sensor){
-  sensor_to_plot = sensor;
+  sensor_to_show = sensor;
 }
 
 function DiskSelectFromMenu(disk){
@@ -294,6 +294,9 @@ sio.on("status_init", (init) => {
   document.getElementById("footer").innerText = `Hostname: ${init.Hostname}`;
 
   NUM_CPU_CORES = init.CPU_Util.length;
+  sensor_to_show = Object.keys(init.CPU_Temp).sort()[0];
+
+  document.getElementById("sensor-selector").innterHTML = "";
   NUM_CPU_PACKAGES = Object.keys(init.CPU_Temp).length;
 
   disk_to_show = Object.keys(init.Disk_IO).sort()[0];
@@ -358,15 +361,15 @@ sio.on("status_init", (init) => {
     })
   ].reverse();
 
-  CpuTempTraces = [...Array.from(Array(NUM_CPU_PACKAGES).keys(), i => {
+  CpuTempTraces = [...Array.from(Array(init.CPU_Temp[sensor_to_show].length).keys(), i => {
     return {
       x: time,
       y: Array(HISTORY_SIZE).fill(null),
-      name: "Core pkg",
+      name: `${sensor_to_show}`,
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: 3,
+        width: init.CPU_Temp[sensor_to_show].length <= 2 ? 3 : 1,
         // color: "#000"
       },
       showlegend: true
@@ -434,11 +437,19 @@ sio.on("status_init", (init) => {
     Disk_io: DiskIoTraces,
   };
 
+  for (let sensor of Object.keys(init.CPU_Temp).sort()) {
+    const sensor_option = document.createElement("option");
+    sensor_option.value = sensor;
+    sensor_option.innerText = sensor;
+    document.getElementById("sensor-selector").appendChild(sensor_option);
+  }
+
   for (let disk of Object.keys(init.Disk_IO).sort()) {
     disk_io[disk] = {
       read: Array(HISTORY_SIZE).fill(null),
       write: Array(HISTORY_SIZE).fill(null),
     };
+
     const disk_option = document.createElement("option");
     disk_option.value = disk;
     disk_option.innerText = disk;
@@ -500,11 +511,14 @@ function update_CPU_temp({CPU_Temp}) {
     } else {
       temp_sensors[sensor] = Array(HISTORY_SIZE).fill(null);
     }
-    const av_temp = CPU_Temp[sensor].reduce((a,b) => a+b) / CPU_Temp[sensor].length;
-    temp_sensors[sensor][HISTORY_LAST] = av_temp;
+    temp_sensors[sensor][HISTORY_LAST] = CPU_Temp[sensor];
   });
-  CpuTempTraces[0].y = temp_sensors[sensor_to_plot];
-  console.log(CpuTempTraces);
+  // CpuTempTraces[0].y = temp_sensors[sensor_to_show];
+  for (let i in CpuTempTraces) {
+    CpuTempTraces[i].y = temp_sensors[sensor_to_show].map(s => s ? s[i] : null);
+  }
+
+//  console.log(temp_sensors[sensor_to_show].map(s => s ? s[0] : null));
 /*
   const pkg_key = Object.keys(CPU_Temp).filter(c => !c.startsWith("Core"))[0];
   CpuTempTraces[NUM_CPU_PACKAGES].name = `Core pkg: ${CPU_Temp[pkg_key]}° C`;

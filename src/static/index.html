@@ -32,11 +32,8 @@
       <span class="navigator-targets network" onclick="ChangePlot(event, 'Network_io')">Net IO<br /><span class="ghost" id="net-ghost">0bps</span></span>
       <span class="navigator-targets cpu-temp" onclick="ChangePlot(event, 'CPU_temp')">
 
-        <span>Temps</span> <br />
-        <select name="sensor-selector" id="sensor-selector" onchange="SensorSelectFromMenu(this.value)">
-          <option value="cpu_thermal0">cpu thermal 0</option>
-          <option value="cpu_thermal1">cpu thermal 1</option>
-        </select>
+        <span>Temperature</span> <br />
+        <select name="sensor-selector" id="sensor-selector" onchange="SensorSelectFromMenu(this.value)"></select>
 
         
       </span>
