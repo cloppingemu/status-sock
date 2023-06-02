@@ -247,13 +247,12 @@ function SelectSensor(sensor) {
   sensor_to_show = sensor;
 
   Traces.CPU_temp = [...Array.from(Array(Object.keys(temp_sensors[sensor_to_show][HISTORY_LAST]).length).keys(), i => {
-    // const name = temp_sensors[sensor_to_show][HISTORY_LAST].length == 1 ? `${sensor_to_show}` : `${sensor_to_show} ${i}`;
     let nameAv = '';
     let nameMax = '';
     if (temp_sensors[sensor_to_show][HISTORY_LAST].length == 1) {
       nameMax = `${sensor_to_show}: ${temp_sensors[sensor_to_show][HISTORY_LAST][0]}° C`;
     } else {
-      nameMax = `max: ${Math.max(...temp_sensors[sensor_to_show][HISTORY_LAST])}° C`;
+      nameMax = `max: ${Math.round(Math.max(...temp_sensors[sensor_to_show][HISTORY_LAST]))}° C`;
       nameAv = `av: ${Math.round(temp_sensors[sensor_to_show][HISTORY_LAST].reduce((a,b) => a+b) / temp_sensors[sensor_to_show][HISTORY_LAST].length)}° C`;
     }
     return {
