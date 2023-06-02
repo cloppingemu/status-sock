@@ -236,32 +236,41 @@ if (window.matchMedia) {
   };
 }
 
-function SensorSelectFromMenu(sensor){
-  SensorSelect(sensor);
+function SelectSensorFromMenu(sensor) {
+  SelectSensor(sensor);
   if (trace == "CPU_temp") {
     ChangePlot(0, trace);
   }
 }
 
-function SensorSelect(sensor){
+function SelectSensor(sensor) {
   sensor_to_show = sensor;
 
-  CpuTempTraces = [...Array.from(Array(Object.keys(temp_sensors[sensor_to_show][HISTORY_LAST]).length).keys(), i => {
+  Traces.CPU_temp = [...Array.from(Array(Object.keys(temp_sensors[sensor_to_show][HISTORY_LAST]).length).keys(), i => {
+    // const name = temp_sensors[sensor_to_show][HISTORY_LAST].length == 1 ? `${sensor_to_show}` : `${sensor_to_show} ${i}`;
+    let nameAv = '';
+    let nameMax = '';
+    if (temp_sensors[sensor_to_show][HISTORY_LAST].length == 1) {
+      nameMax = `${sensor_to_show}: ${temp_sensors[sensor_to_show][HISTORY_LAST][0]}° C`;
+    } else {
+      nameMax = `max: ${Math.max(...temp_sensors[sensor_to_show][HISTORY_LAST])}° C`;
+      nameAv = `av: ${Math.round(temp_sensors[sensor_to_show][HISTORY_LAST].reduce((a,b) => a+b) / temp_sensors[sensor_to_show][HISTORY_LAST].length)}° C`;
+    }
     return {
       x: Object.keys(Array(HISTORY_SIZE).fill(null)).map(v => v*REFRESH_PERIOD).reverse(),
-      y: Array(HISTORY_SIZE).fill(null),
-      name: `${sensor_to_show} ${i}`,
+      y: temp_sensors[sensor_to_show].map(s => s ? s[i] : null),
+      name: i == 0 ? nameMax : nameAv,
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: temp_sensors[sensor_to_show].length <= 2 ? 3 : 1
+        width: temp_sensors[sensor_to_show][HISTORY_LAST].length > 2 ? 1 : 3
       },
-      showlegend: true
+      showlegend: temp_sensors[sensor_to_show][HISTORY_LAST].length == 1 || i < 2
     };
   })];
 }
 
-function DiskSelectFromMenu(disk){
+function DiskSelectFromMenu(disk) {
   DiskSelect(disk);
   if (trace == "Disk_io") {
     ChangePlot(0, trace);
@@ -307,8 +316,6 @@ sio.on("client_count", (host) => {
 });
 
 sio.on("status_init", (init) => {
-  console.log("status_init");
-
   document.title = `${init.Hostname}`;
   document.getElementById("footer").innerText = `Hostname: ${init.Hostname}`;
 
@@ -317,7 +324,6 @@ sio.on("status_init", (init) => {
 
   NUM_CPU_PACKAGES = Object.keys(init.CPU_Temp).length;
 
-  document.getElementById("disk-selector").innerHTML = "";
   disk_to_show = Object.keys(init.Disk_IO).sort()[0];
 
   REFRESH_PERIOD = init.Refresh_Period;
@@ -383,11 +389,11 @@ sio.on("status_init", (init) => {
     return {
       x: time,
       y: Array(HISTORY_SIZE).fill(null),
-      name: `${sensor_to_show} ${i}`,
+      name: init.CPU_Temp[sensor_to_show].length == 1 ? `${sensor_to_show}` : `${sensor_to_show} ${i}`,
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: init.CPU_Temp[sensor_to_show].length <= 2 ? 3 : 1,
+        width: init.CPU_Temp[sensor_to_show].length > 2 ? 1 : 3,
         // color: "#000"
       },
       showlegend: true
@@ -456,7 +462,7 @@ sio.on("status_init", (init) => {
   };
 
   temp_sensors = { };
-  console.log(document.getElementById("sensor-selector")); //.innterHTML = "";
+  Array.from(document.getElementById("sensor-selector").children).map(o => o.remove());
   for (let sensor of Object.keys(init.CPU_Temp).sort()) {
     temp_sensors[sensor] = [
       Array(HISTORY_SIZE).fill(Array(NUM_CPU_PACKAGES).fill(null))
@@ -467,6 +473,7 @@ sio.on("status_init", (init) => {
     document.getElementById("sensor-selector").appendChild(sensor_option);
   }
 
+  Array.from(document.getElementById("disk-selector").children).map(o => o.remove());
   for (let disk of Object.keys(init.Disk_IO).sort()) {
     disk_io[disk] = {
       read: Array(HISTORY_SIZE).fill(null),
@@ -529,8 +536,6 @@ function update_Disk_io({Disk_IO}) {
 function update_CPU_temp({CPU_Temp}) {
   const current_sensors = Object.keys(temp_sensors);
   Object.keys(CPU_Temp).map((sensor) => {
-    console.log(sensor);
-    console.log(current_sensors);
     if (current_sensors.includes(sensor)) {
       temp_sensors[sensor].splice(0, HISTORY_LAST, ...temp_sensors[sensor].slice(1, HISTORY_LAST));
     } else {
@@ -538,25 +543,18 @@ function update_CPU_temp({CPU_Temp}) {
     }
     temp_sensors[sensor][HISTORY_LAST] = CPU_Temp[sensor];
   });
-  // CpuTempTraces[0].y = temp_sensors[sensor_to_show];
-  for (let i in CpuTempTraces) {
-    CpuTempTraces[i].y = temp_sensors[sensor_to_show].map(s => s ? s[i] : null);
+  for (let i in Traces.CPU_temp) {
+    Traces.CPU_temp[i].y = temp_sensors[sensor_to_show].map(s => s ? s[i] : null);
+    if (CPU_Temp[sensor_to_show].length == 1) {
+      Traces.CPU_temp[0].name = `${sensor_to_show}: ${Math.round(CPU_Temp[sensor_to_show][0])}° C`
+    } else {
+      Traces.CPU_temp[0].name = `max: ${Math.max(...CPU_Temp[sensor_to_show])}° C`
+      Traces.CPU_temp[1].name = `av: ${Math.round(CPU_Temp[sensor_to_show].reduce((a,b) => a+b) / CPU_Temp[sensor_to_show].length)}° C`
+      for (i in Object.keys(Array(CPU_Temp[sensor_to_show].length - 2).fill(0))) {
+        Traces.CPU_temp[i - -2].showlegend = false;
+      }
+    }
   }
-  // console.log(temp_sensors);
-
-//  console.log(temp_sensors[sensor_to_show].map(s => s ? s[0] : null));
-/*
-  const pkg_key = Object.keys(CPU_Temp).filter(c => !c.startsWith("Core"))[0];
-  CpuTempTraces[NUM_CPU_PACKAGES].name = `Core pkg: ${CPU_Temp[pkg_key]}° C`;
-  CpuTempTraces[NUM_CPU_PACKAGES].y.splice(0, HISTORY_LAST, ...CpuTempTraces[NUM_CPU_PACKAGES].y.slice(1, HISTORY_LAST));
-  CpuTempTraces[NUM_CPU_PACKAGES].y[HISTORY_LAST] = CPU_Temp[pkg_key];
-  for (let cpu_key in Array(NUM_CPU_PACKAGES).fill(0)) {
-    CpuTempTraces[cpu_key].showlegend = false;
-    CpuTempTraces[cpu_key].y.splice(0, HISTORY_LAST, ...CpuTempTraces[cpu_key].y.slice(1, HISTORY_LAST));
-    CpuTempTraces[cpu_key].y[HISTORY_LAST] = CPU_Temp[`Core ${cpu_key}`];
-  }
-  CpuTempGhost.innerText = `${CPU_Temp[pkg_key]}° C`;
-*/
 }
 
 const CpuUtilGhost = document.getElementById("cpu_util-ghost");
@@ -745,9 +743,9 @@ sio.on("status_update", (status) => {
 let view = 1;
 const views = [
   'CPU_util',
-  'CPU_temp',
   'Memory',
   'Network_io',
+  'CPU_temp',
   'Disk_io'
 ]
 
@@ -770,9 +768,24 @@ document.onkeydown = ((event) => {
 
     case "4":
       view = 4;
+      if (trace == 'CPU_temp') {
+        sensor_to_show = Object.keys(temp_sensors).sort()[(Object.keys(temp_sensors).sort().indexOf(sensor_to_show) + 1) % Object.keys(temp_sensors).length];
+        SelectSensor(sensor_to_show);
+        document.getElementById("sensor-selector").value = sensor_to_show;
+      }
       ChangePlot(0, 'CPU_temp');
       break;
 
+    case "$":
+      view = 4;
+      if (trace == 'CPU_temp') {
+        sensor_to_show = Object.keys(temp_sensors).sort()[(Object.keys(temp_sensors).sort().indexOf(sensor_to_show) - 1 + Object.keys(temp_sensors).length) % Object.keys(temp_sensors).length];
+        SelectSensor(sensor_to_show);
+        document.getElementById("sensor-selector").value = sensor_to_show;
+      }
+      ChangePlot(0, 'CPU_temp');
+      break;
+  
     case "5":
       view = 5;
       if (trace == 'Disk_io') {
