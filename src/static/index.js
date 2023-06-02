@@ -105,7 +105,7 @@ let MemTraces = [ ];
 let CpuUtilTraces = [ ];
 
 let sensor_to_show;
-const temp_sensors = { };
+let temp_sensors = { };
 let CpuTempTraces = [ ];
 
 const all_disks = [ ];
@@ -247,7 +247,6 @@ function SensorSelect(sensor){
   sensor_to_show = sensor;
 
   CpuTempTraces = [...Array.from(Array(Object.keys(temp_sensors[sensor_to_show][HISTORY_LAST]).length).keys(), i => {
-    console.log(i);
     return {
       x: Object.keys(Array(HISTORY_SIZE).fill(null)).map(v => v*REFRESH_PERIOD).reverse(),
       y: Array(HISTORY_SIZE).fill(null),
@@ -308,17 +307,18 @@ sio.on("client_count", (host) => {
 });
 
 sio.on("status_init", (init) => {
+  console.log("status_init");
+
   document.title = `${init.Hostname}`;
   document.getElementById("footer").innerText = `Hostname: ${init.Hostname}`;
 
   NUM_CPU_CORES = init.CPU_Util.length;
   sensor_to_show = Object.keys(init.CPU_Temp).sort()[0];
 
-  document.getElementById("sensor-selector").innterHTML = "";
   NUM_CPU_PACKAGES = Object.keys(init.CPU_Temp).length;
 
-  disk_to_show = Object.keys(init.Disk_IO).sort()[0];
   document.getElementById("disk-selector").innerHTML = "";
+  disk_to_show = Object.keys(init.Disk_IO).sort()[0];
 
   REFRESH_PERIOD = init.Refresh_Period;
   HISTORY_SIZE = Math.floor(HISTORY_TIME / REFRESH_PERIOD);
@@ -455,10 +455,15 @@ sio.on("status_init", (init) => {
     Disk_io: DiskIoTraces,
   };
 
+  temp_sensors = { };
+  console.log(document.getElementById("sensor-selector")); //.innterHTML = "";
   for (let sensor of Object.keys(init.CPU_Temp).sort()) {
+    temp_sensors[sensor] = [
+      Array(HISTORY_SIZE).fill(Array(NUM_CPU_PACKAGES).fill(null))
+    ];
     const sensor_option = document.createElement("option");
     sensor_option.value = sensor;
-    sensor_option.innerText = sensor;
+    sensor_option.textContent = sensor;
     document.getElementById("sensor-selector").appendChild(sensor_option);
   }
 
@@ -524,6 +529,8 @@ function update_Disk_io({Disk_IO}) {
 function update_CPU_temp({CPU_Temp}) {
   const current_sensors = Object.keys(temp_sensors);
   Object.keys(CPU_Temp).map((sensor) => {
+    console.log(sensor);
+    console.log(current_sensors);
     if (current_sensors.includes(sensor)) {
       temp_sensors[sensor].splice(0, HISTORY_LAST, ...temp_sensors[sensor].slice(1, HISTORY_LAST));
     } else {
@@ -535,7 +542,7 @@ function update_CPU_temp({CPU_Temp}) {
   for (let i in CpuTempTraces) {
     CpuTempTraces[i].y = temp_sensors[sensor_to_show].map(s => s ? s[i] : null);
   }
-  console.log(temp_sensors);
+  // console.log(temp_sensors);
 
 //  console.log(temp_sensors[sensor_to_show].map(s => s ? s[0] : null));
 /*
