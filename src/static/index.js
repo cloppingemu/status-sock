@@ -215,6 +215,9 @@ function ChangePlot(event, key) {
 
 function UpdatePlotColors(scheme) {
   CpuUtilTraces[NUM_CPU_CORES].line.color = isDarkMode ? "#fff" : "#000";
+  if (Traces.CPU_temp.length > 2) {
+    Traces.CPU_temp[Object.keys(Traces.CPU_temp).length - 1].line.color = isDarkMode ? "#fff" : "#000"; 
+  }
 
   layout.plot_bgcolor = color_scheme_layout[scheme].plot_bgcolor;
   layout.paper_bgcolor = color_scheme_layout[scheme].paper_bgcolor;
@@ -246,24 +249,40 @@ function SelectSensor(sensor) {
   Traces.CPU_temp = [...Array.from(Array(Object.keys(temp_sensors[sensor_to_show][HISTORY_LAST]).length).keys(), i => {
     let nameAv = '';
     let nameMax = '';
-    if (temp_sensors[sensor_to_show][HISTORY_LAST].length == 1) {
-      nameMax = `${sensor_to_show}: ${temp_sensors[sensor_to_show][HISTORY_LAST][0]}° C`;
-    } else {
+    if (temp_sensors[sensor_to_show][HISTORY_LAST].length > 2) {
       nameMax = `max: ${Math.round(Math.max(...temp_sensors[sensor_to_show][HISTORY_LAST]))}° C`;
       nameAv = `av: ${Math.round(temp_sensors[sensor_to_show][HISTORY_LAST].reduce((a,b) => a+b) / temp_sensors[sensor_to_show][HISTORY_LAST].length)}° C`;
+    } else {
+      nameMax = `${sensor_to_show} ${i}: ${temp_sensors[sensor_to_show][HISTORY_LAST][i]}° C`;
     }
+
+    let data = [];
+    
+    if (temp_sensors[sensor_to_show][HISTORY_LAST].length > 2) {
+      if (i == 0) {
+        data = temp_sensors[sensor_to_show].map(t => t ? t.reduce((a,b) => a > b ? a : b) : null);
+      } else if (i == 1) {
+        data = temp_sensors[sensor_to_show].map(t => t ? t.reduce((a,b) => a+b) / t.length : null);
+      } else {
+        data = temp_sensors[sensor_to_show].map(s => s ? s[i-2] : null);
+      }
+    } else {
+      data = temp_sensors[sensor_to_show].map(s => s ? s[i] : null);
+    }
+
     return {
       x: Object.keys(Array(HISTORY_SIZE).fill(null)).map(v => v*REFRESH_PERIOD).reverse(),
-      y: temp_sensors[sensor_to_show].map(s => s ? s[i] : null),
-      name: i == 0 ? nameMax : nameAv,
+      y: data,
+      name: temp_sensors[sensor_to_show][HISTORY_LAST].length > 2 ? (i == 0 ? nameMax : nameAv) : nameMax,
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: i == 0 ? 3 : temp_sensors[sensor_to_show][HISTORY_LAST].length > 2 ? 1 : 3
+        width: temp_sensors[sensor_to_show][HISTORY_LAST].length > 2 ? (i < 2 ? 3 : 1) : 3,
+        color: temp_sensors[sensor_to_show][HISTORY_LAST].length > 2 ? (i == 0 ? "#000" : null) : null
       },
-      showlegend: temp_sensors[sensor_to_show][HISTORY_LAST].length == 1 || i < 2
+      showlegend: i < 2
     };
-  })];
+  })].reverse();
 }
 
 function DiskSelectFromMenu(disk) {
@@ -381,20 +400,33 @@ sio.on("status_init", (init) => {
     })
   ].reverse();
 
-  CpuTempTraces = [...Array.from(Array(init.CPU_Temp[sensor_to_show].length).keys(), i => {
+  CpuTempTraces = [...Array.from(Array(
+    Object.keys(init.CPU_Temp[sensor_to_show]).length + (Object.keys(init.CPU_Temp[sensor_to_show]).length > 2 ? 2 : 0)
+  ).keys(), i => {
+    let nameAv = '';
+    let nameMax = '';
+    if (init.CPU_Temp[sensor_to_show].length > 2) {
+      nameMax = `max: ${Math.round(Math.max(...init.CPU_Temp[sensor_to_show]))}° C`;
+      nameAv = `av: ${Math.round(init.CPU_Temp[sensor_to_show].reduce((a,b) => a+b) / init.CPU_Temp[sensor_to_show].length)}° C`;
+    } else {
+      nameMax = `${sensor_to_show} ${i}: ${init.CPU_Temp[sensor_to_show][i]}° C`;
+    }
+
+    let data = Array(HISTORY_SIZE).fill(null);
+
     return {
-      x: time,
-      y: Array(HISTORY_SIZE).fill(null),
-      name: init.CPU_Temp[sensor_to_show].length == 1 ? `${sensor_to_show}` : `${sensor_to_show} ${i}`,
+      x: Object.keys(Array(HISTORY_SIZE).fill(null)).map(v => v*REFRESH_PERIOD).reverse(),
+      y: data,
+      name: init.CPU_Temp[sensor_to_show].length > 2 ? (i == 0 ? nameMax : nameAv) : `${sensor_to_show}`,
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: init.CPU_Temp[sensor_to_show].length > 2 ? 1 : 3,
+        width: init.CPU_Temp[sensor_to_show].length > 2 ? (i < 2 ? 3 : 1) : 3,
+        color: init.CPU_Temp[sensor_to_show].length > 2 ? (i == 0 ? "#000" : null) : null
       },
-      showlegend: true
+      showlegend: i <= 2
     };
-  })];
-
+  })].reverse();
 
   DiskIoTraces = [
     {
@@ -462,6 +494,7 @@ sio.on("status_init", (init) => {
     temp_sensors[sensor] = [
       Array(HISTORY_SIZE).fill(Array(NUM_CPU_PACKAGES).fill(null))
     ];
+
     const sensor_option = document.createElement("option");
     sensor_option.value = sensor;
     sensor_option.textContent = sensor;
@@ -559,26 +592,25 @@ function update_Disk_io({Disk_IO}) {
 }
 
 function update_CPU_temp({CPU_Temp}) {
-  const current_sensors = Object.keys(temp_sensors);
   Object.keys(CPU_Temp).map((sensor) => {
-    if (current_sensors.includes(sensor)) {
-      temp_sensors[sensor].splice(0, HISTORY_LAST, ...temp_sensors[sensor].slice(1, HISTORY_LAST));
+    temp_sensors[sensor].splice(0, HISTORY_LAST, ...temp_sensors[sensor].slice(1, HISTORY_LAST));
+    if (CPU_Temp[sensor].length > 2) {
+      temp_sensors[sensor][HISTORY_LAST] = [Math.max(...CPU_Temp[sensor]), Math.round(CPU_Temp[sensor].reduce((a,b) => a+b) / CPU_Temp[sensor].length), ...CPU_Temp[sensor]].reverse();
     } else {
-      temp_sensors[sensor] = Array(HISTORY_SIZE).fill(null);
+      temp_sensors[sensor][HISTORY_LAST] = CPU_Temp[sensor];
     }
-    temp_sensors[sensor][HISTORY_LAST] = CPU_Temp[sensor];
   });
-  for (let i in Traces.CPU_temp) {
-    Traces.CPU_temp[i].y = temp_sensors[sensor_to_show].map(s => s ? s[i] : null);
-    if (CPU_Temp[sensor_to_show].length == 1) {
-      Traces.CPU_temp[0].name = `${sensor_to_show}: ${Math.round(CPU_Temp[sensor_to_show][0])}° C`;
-    } else {
-      Traces.CPU_temp[0].name = `max: ${Math.max(...CPU_Temp[sensor_to_show])}° C`;
-      Traces.CPU_temp[0].line.width = 3;
-      Traces.CPU_temp[1].name = `av: ${Math.round(CPU_Temp[sensor_to_show].reduce((a,b) => a+b) / CPU_Temp[sensor_to_show].length)}° C`;
-      for (i in Object.keys(Array(CPU_Temp[sensor_to_show].length - 2).fill(0))) {
-        Traces.CPU_temp[i - -2].showlegend = false;
-      }
+
+  if (CPU_Temp[sensor_to_show].length > 2) {
+    Traces.CPU_temp[CPU_Temp[sensor_to_show].length + 1].name = `max: ${temp_sensors[sensor_to_show][HISTORY_LAST][temp_sensors[sensor_to_show][HISTORY_LAST].length-1]}° C`;
+    Traces.CPU_temp[CPU_Temp[sensor_to_show].length].name = `av: ${temp_sensors[sensor_to_show][HISTORY_LAST][temp_sensors[sensor_to_show][HISTORY_LAST].length-2]} C`;
+    for (let i in Traces.CPU_temp) {
+      Traces.CPU_temp[i].y = temp_sensors[sensor_to_show].map(s => s ? s[i] : null);
+    }
+  } else {
+    for (let i in CPU_Temp[sensor_to_show]) {
+      Traces.CPU_temp[i].name = `${sensor_to_show} ${i}: ${Math.round(CPU_Temp[sensor_to_show][i])}° C`;
+      Traces.CPU_temp[i].y = temp_sensors[sensor_to_show].map(s => s ? s[i] : null);
     }
   }
 }
