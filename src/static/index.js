@@ -259,7 +259,7 @@ function SelectSensor(sensor) {
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: temp_sensors[sensor_to_show][HISTORY_LAST].length > 2 ? 1 : 3
+        width: i == 0 ? 3 : temp_sensors[sensor_to_show][HISTORY_LAST].length > 2 ? 1 : 3
       },
       showlegend: temp_sensors[sensor_to_show][HISTORY_LAST].length == 1 || i < 2
     };
@@ -571,10 +571,11 @@ function update_CPU_temp({CPU_Temp}) {
   for (let i in Traces.CPU_temp) {
     Traces.CPU_temp[i].y = temp_sensors[sensor_to_show].map(s => s ? s[i] : null);
     if (CPU_Temp[sensor_to_show].length == 1) {
-      Traces.CPU_temp[0].name = `${sensor_to_show}: ${Math.round(CPU_Temp[sensor_to_show][0])}° C`
+      Traces.CPU_temp[0].name = `${sensor_to_show}: ${Math.round(CPU_Temp[sensor_to_show][0])}° C`;
     } else {
-      Traces.CPU_temp[0].name = `max: ${Math.max(...CPU_Temp[sensor_to_show])}° C`
-      Traces.CPU_temp[1].name = `av: ${Math.round(CPU_Temp[sensor_to_show].reduce((a,b) => a+b) / CPU_Temp[sensor_to_show].length)}° C`
+      Traces.CPU_temp[0].name = `max: ${Math.max(...CPU_Temp[sensor_to_show])}° C`;
+      Traces.CPU_temp[0].line.width = 3;
+      Traces.CPU_temp[1].name = `av: ${Math.round(CPU_Temp[sensor_to_show].reduce((a,b) => a+b) / CPU_Temp[sensor_to_show].length)}° C`;
       for (i in Object.keys(Array(CPU_Temp[sensor_to_show].length - 2).fill(0))) {
         Traces.CPU_temp[i - -2].showlegend = false;
       }
