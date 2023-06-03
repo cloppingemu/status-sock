@@ -122,11 +122,11 @@ async def main():
 
   for _ in range(50):
     *v, _ = await asyncio.gather(
-      # up_time.refresh(),
-      # cpu_util.refresh(),
-      # cpu_temp.refresh(),
-      # mem_util.refresh(),
-      # net_io.refresh(),
+      up_time.refresh(),
+      cpu_util.refresh(),
+      cpu_temp.refresh(),
+      mem_util.refresh(),
+      net_io.refresh(),
       disk_io.refresh(),
 
       asyncio.sleep(0.25),
