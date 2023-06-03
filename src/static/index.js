@@ -73,7 +73,7 @@ const layout_config = {
     chart_title: "CPU Temp",
     y_title: "Temp (°C)",
     y_axis_max: 100,
-    legend_traceorder: "normal",
+    legend_traceorder: "reversed",
     updator: update_CPU_temp,
   },
   Disk_io: {
@@ -247,11 +247,9 @@ function SelectSensor(sensor) {
   sensor_to_show = sensor;
 
   Traces.CPU_temp = [...Array.from(Array(Object.keys(temp_sensors[sensor_to_show][HISTORY_LAST]).length).keys(), i => {
-    let nameAv = '';
     let nameMax = '';
     if (temp_sensors[sensor_to_show][HISTORY_LAST].length > 2) {
       nameMax = `max: ${Math.round(Math.max(...temp_sensors[sensor_to_show][HISTORY_LAST]))}° C`;
-      nameAv = `av: ${Math.round(temp_sensors[sensor_to_show][HISTORY_LAST].reduce((a,b) => a+b) / temp_sensors[sensor_to_show][HISTORY_LAST].length)}° C`;
     } else {
       nameMax = `${sensor_to_show} ${i}: ${temp_sensors[sensor_to_show][HISTORY_LAST][i]}° C`;
     }
@@ -273,14 +271,14 @@ function SelectSensor(sensor) {
     return {
       x: Object.keys(Array(HISTORY_SIZE).fill(null)).map(v => v*REFRESH_PERIOD).reverse(),
       y: data,
-      name: temp_sensors[sensor_to_show][HISTORY_LAST].length > 2 ? (i == 0 ? nameMax : nameAv) : nameMax,
+      name: nameMax,
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: temp_sensors[sensor_to_show][HISTORY_LAST].length > 2 ? (i < 2 ? 3 : 1) : 3,
+        width: temp_sensors[sensor_to_show][HISTORY_LAST].length > 2 ? (i == 0 ? 3 : 1) : 3,
         color: temp_sensors[sensor_to_show][HISTORY_LAST].length > 2 ? (i == 0 ? "#000" : null) : null
       },
-      showlegend: i < 2
+      showlegend: (temp_sensors[sensor_to_show][HISTORY_LAST].length <= 2) || (temp_sensors[sensor_to_show][HISTORY_LAST].length > 2 && (i == 0 || i == temp_sensors[sensor_to_show][HISTORY_LAST].length - 1))
     };
   })].reverse();
 }
@@ -401,13 +399,11 @@ sio.on("status_init", (init) => {
   ].reverse();
 
   CpuTempTraces = [...Array.from(Array(
-    Object.keys(init.CPU_Temp[sensor_to_show]).length + (Object.keys(init.CPU_Temp[sensor_to_show]).length > 2 ? 2 : 0)
+    Object.keys(init.CPU_Temp[sensor_to_show]).length + (Object.keys(init.CPU_Temp[sensor_to_show]).length > 2 ? 1 : 0)
   ).keys(), i => {
-    let nameAv = '';
     let nameMax = '';
     if (init.CPU_Temp[sensor_to_show].length > 2) {
       nameMax = `max: ${Math.round(Math.max(...init.CPU_Temp[sensor_to_show]))}° C`;
-      nameAv = `av: ${Math.round(init.CPU_Temp[sensor_to_show].reduce((a,b) => a+b) / init.CPU_Temp[sensor_to_show].length)}° C`;
     } else {
       nameMax = `${sensor_to_show} ${i}: ${init.CPU_Temp[sensor_to_show][i]}° C`;
     }
@@ -417,14 +413,14 @@ sio.on("status_init", (init) => {
     return {
       x: Object.keys(Array(HISTORY_SIZE).fill(null)).map(v => v*REFRESH_PERIOD).reverse(),
       y: data,
-      name: init.CPU_Temp[sensor_to_show].length > 2 ? (i == 0 ? nameMax : nameAv) : `${sensor_to_show}`,
+      name: nameMax,
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: init.CPU_Temp[sensor_to_show].length > 2 ? (i < 2 ? 3 : 1) : 3,
+        width: init.CPU_Temp[sensor_to_show].length > 2 ? (i == 0 ? 3 : 1) : 3,
         color: init.CPU_Temp[sensor_to_show].length > 2 ? (i == 0 ? "#000" : null) : null
       },
-      showlegend: i <= 2
+      showlegend: (init.CPU_Temp[sensor_to_show].length <= 2) || (init.CPU_Temp[sensor_to_show].length > 2 && (i == 0 || i == init.CPU_Temp[sensor_to_show].length + 1))
     };
   })].reverse();
 
@@ -595,15 +591,17 @@ function update_CPU_temp({CPU_Temp}) {
   Object.keys(CPU_Temp).map((sensor) => {
     temp_sensors[sensor].splice(0, HISTORY_LAST, ...temp_sensors[sensor].slice(1, HISTORY_LAST));
     if (CPU_Temp[sensor].length > 2) {
-      temp_sensors[sensor][HISTORY_LAST] = [Math.max(...CPU_Temp[sensor]), Math.round(CPU_Temp[sensor].reduce((a,b) => a+b) / CPU_Temp[sensor].length), ...CPU_Temp[sensor]].reverse();
+      temp_sensors[sensor][HISTORY_LAST] = [Math.max(...CPU_Temp[sensor]), ...CPU_Temp[sensor]].reverse();
     } else {
       temp_sensors[sensor][HISTORY_LAST] = CPU_Temp[sensor];
     }
   });
 
   if (CPU_Temp[sensor_to_show].length > 2) {
-    Traces.CPU_temp[CPU_Temp[sensor_to_show].length + 1].name = `max: ${temp_sensors[sensor_to_show][HISTORY_LAST][temp_sensors[sensor_to_show][HISTORY_LAST].length-1]}° C`;
-    Traces.CPU_temp[CPU_Temp[sensor_to_show].length].name = `av: ${temp_sensors[sensor_to_show][HISTORY_LAST][temp_sensors[sensor_to_show][HISTORY_LAST].length-2]} C`;
+    Traces.CPU_temp[CPU_Temp[sensor_to_show].length].name = `max: ${temp_sensors[sensor_to_show][HISTORY_LAST][0]}° C`;
+    Traces.CPU_temp[CPU_Temp[sensor_to_show].length-1].name = `av: ${Math.round(
+      CPU_Temp[sensor_to_show].reduce((a,b) => a+b) / CPU_Temp[sensor_to_show].length
+    )}° C`;
     for (let i in Traces.CPU_temp) {
       Traces.CPU_temp[i].y = temp_sensors[sensor_to_show].map(s => s ? s[i] : null);
     }
