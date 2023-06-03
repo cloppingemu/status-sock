@@ -276,7 +276,7 @@ function SelectSensor(sensor) {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
         width: temp_sensors[sensor_to_show][HISTORY_LAST].length > 2 ? (i == 0 ? 3 : 1) : 3,
-        color: temp_sensors[sensor_to_show][HISTORY_LAST].length > 2 ? (i == 0 ? "#000" : null) : null
+        color: temp_sensors[sensor_to_show][HISTORY_LAST].length > 2 ? (i == 0 ? "#000" : undefined) : undefined
       },
       showlegend: (temp_sensors[sensor_to_show][HISTORY_LAST].length <= 2) || (temp_sensors[sensor_to_show][HISTORY_LAST].length > 2 && (i == 0 || i == temp_sensors[sensor_to_show][HISTORY_LAST].length - 1))
     };
@@ -418,7 +418,7 @@ sio.on("status_init", (init) => {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
         width: init.CPU_Temp[sensor_to_show].length > 2 ? (i == 0 ? 3 : 1) : 3,
-        color: init.CPU_Temp[sensor_to_show].length > 2 ? (i == 0 ? "#000" : null) : null
+        color: init.CPU_Temp[sensor_to_show].length > 2 ? (i == 0 ? "#000" : undefined) : undefined
       },
       showlegend: (init.CPU_Temp[sensor_to_show].length <= 2) || (init.CPU_Temp[sensor_to_show].length > 2 && (i == 0 || i == init.CPU_Temp[sensor_to_show].length + 1))
     };
