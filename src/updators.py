@@ -56,23 +56,45 @@ class DiskIo:
 
   def register(self):
     self._last = psutil.disk_io_counters(perdisk=True)
-    self._disks = [disk for disk in self._last if disk.isalpha() \
-                            or disk.rstrip(digits).endswith("mmcblk") \
-                            or disk.rstrip(digits).endswith("nvme0n")]
+    self._disks = self.filter_drives(self._last)
+
+  @staticmethod
+  def filter_drives(disks):
+    return {
+      disk for disk in disks if disk.isalpha()
+        or disk.rstrip(digits).endswith("mmcblk")
+        or disk.rstrip(digits).endswith("nvme0n")
+    }
 
   async def refresh(self):
     """
     -> disk: {read: , write: } (Bps)
     """
     io = psutil.disk_io_counters(perdisk=True)
-    net_io = {
+    new_disks = self.filter_drives(io)
+
+    lost_disks = self._disks - new_disks
+    if lost_disks:
+      self._disks = new_disks
+
+    disk_io = {
       disk: {
         "read": io[disk].read_bytes - self._last[disk].read_bytes,
         "write": io[disk].write_bytes - self._last[disk].write_bytes,
       } for disk in self._disks
     }
+
     self._last = io
-    return net_io
+
+    unseen_disks = new_disks - self._disks
+    if unseen_disks:
+      self._disks = new_disks
+      return {
+        **disk_io,
+        **{k: {"read": 0, "write": 0} for k in unseen_disks}
+      }
+
+    return disk_io
 
 
 class UpTime:
@@ -98,13 +120,13 @@ async def main():
         "Net IO test (Bps)",
         "Disk IO test (Bps)", sep="\t")
 
-  for _ in range(10):
+  for _ in range(50):
     *v, _ = await asyncio.gather(
-      up_time.refresh(),
-      cpu_util.refresh(),
-      cpu_temp.refresh(),
-      mem_util.refresh(),
-      net_io.refresh(),
+      # up_time.refresh(),
+      # cpu_util.refresh(),
+      # cpu_temp.refresh(),
+      # mem_util.refresh(),
+      # net_io.refresh(),
       disk_io.refresh(),
 
       asyncio.sleep(0.25),

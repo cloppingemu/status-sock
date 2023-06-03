@@ -27,4 +27,3 @@ TODO:
 
  - `index.js` needs clean-up. Classes should have been used for all of the traces.
  - Updators have not been tested with AMD CPUs. CPU temperature sensors names may throw off the dash-board.
- - Avaiable disks can change at any time. This behaviour needs to be handled by the updators and the dash-board.

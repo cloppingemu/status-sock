@@ -2,11 +2,11 @@ let NUM_CPU_PACKAGES = 2;
 let NUM_CPU_CORES = 1;
 let MAX_RAM_SIZE = 1;
 
-const LINE_SHAPE = 'spline';  // 'linear';
-const LINE_SMOOTHING = 1.0;   // Has an effect only if `shape` is set to "spline". Sets the amount of smoothing.
-                              // "0" corresponds to no smoothing (equivalent to a "linear" shape).
+const LINE_SHAPE = 'spline';   // 'linear';
+const LINE_SMOOTHING = 1.0;    // Has an effect only if `shape` is set to "spline". Sets the amount of smoothing.
+                               // "0" corresponds to no smoothing (equivalent to a "linear" shape).
 
-const HISTORY_TIME = 31;  // seconds
+const HISTORY_TIME = 31;       // seconds
 const CONVERSION_FROM_B = {
   B: 1,
   KB: 1024,
@@ -20,23 +20,23 @@ let isDarkMode = window.matchMedia && window.matchMedia("(prefers-color-scheme: 
 
 let disk_to_show = "";
 
-let init_done = 0;  // not done
+let init_done = 0;        // not done
 let REFRESH_PERIOD = 1.;  // s
 let HISTORY_SIZE = HISTORY_TIME / REFRESH_PERIOD;
 let HISTORY_LAST = HISTORY_SIZE - 1;
 
-// const PLOTLY_COLORS = [
-//   '#1f77b4',  // muted blue
-//   '#ff7f0e',  // safety orange
-//   '#2ca02c',  // cooked asparagus green
-//   '#d62728',  // brick red
-//   '#9467bd',  // muted purple
-//   '#8c564b',  // chestnut brown
-//   '#e377c2',  // raspberry yogurt pink
-//   '#7f7f7f',  // middle gray
-//   '#bcbd22',  // curry yellow-green
-//   '#17becf'   // blue-teal
-// ]
+const PLOTLY_COLORS = [
+  '#1f77b4',  // muted blue
+  '#ff7f0e',  // safety orange
+  '#2ca02c',  // cooked asparagus green
+  '#d62728',  // brick red
+  '#9467bd',  // muted purple
+  '#8c564b',  // chestnut brown
+  '#e377c2',  // raspberry yogurt pink
+  '#7f7f7f',  // middle gray
+  '#bcbd22',  // curry yellow-green
+  '#17becf'   // blue-teal
+]
 
 
 function clip10(c, n) {
@@ -161,7 +161,8 @@ const layout = {
   showlegend: true,
   legend: {
     orientation: "h"
-  }
+  },
+  colorway: PLOTLY_COLORS
 };
 const color_scheme_layout = {
   dark: {
@@ -200,11 +201,9 @@ function ChangePlot(event, key) {
   for (const element of document.getElementsByClassName("navigator-targets")) {
     if (element.classList.contains(eventNameMapping[key])) {
       element.style.border = "1px solid var(--active-border)";
-      // element.style.boxShadow = "0px 0px 2px var(--active-border)";
       element.style.backgroundColor = "var(--active-cell)";
     } else {
       element.style.border = "1px solid var(--inactive-border)";
-      // element.style.boxShadow = "0px 0px 0px var(--inactive-border)";
       element.style.backgroundColor = "var(--inactive-cell)";
     }
   }
@@ -215,7 +214,6 @@ function ChangePlot(event, key) {
 }
 
 function UpdatePlotColors(scheme) {
-  // CpuTempTraces[0].line.color = isDarkMode ? "#fff" : "#000";
   CpuUtilTraces[NUM_CPU_CORES].line.color = isDarkMode ? "#fff" : "#000";
 
   layout.plot_bgcolor = color_scheme_layout[scheme].plot_bgcolor;
@@ -229,7 +227,6 @@ function UpdatePlotColors(scheme) {
 if (window.matchMedia) {
   window.matchMedia("(prefers-color-scheme: dark)").onchange = (change) => {
     isDarkMode = change.matches;
-    // CpuTempTraces[0].line.color = isDarkMode ? "#fff" : "#000";
     CpuUtilTraces[NUM_CPU_CORES].line.color = isDarkMode ? "#fff" : "#000";
     UpdatePlotColors(isDarkMode ? "dark" : "light");
     Plotly.redraw("Plot-Area");
@@ -393,7 +390,6 @@ sio.on("status_init", (init) => {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
         width: init.CPU_Temp[sensor_to_show].length > 2 ? 1 : 3,
-        // color: "#000"
       },
       showlegend: true
     };
@@ -489,7 +485,7 @@ sio.on("status_init", (init) => {
 
   Up_Time = init.Up_Time;
 
-  init_done = 1;  // done
+  init_done = 1;       // done
 
   UpdatePlotColors(isDarkMode ? "dark" : "light");
   ChangePlot(0, trace);
@@ -508,7 +504,38 @@ function update_disk_io_trace() {
 }
 const DiskIoGhost = document.getElementById("disk-ghost");
 function update_Disk_io({Disk_IO}) {
-  for (let disk of Object.keys(Disk_IO).sort()) {
+  const new_disks = Object.keys(Disk_IO).filter(d => !Object.keys(disk_io).includes(d));
+  const missing_disks = Object.keys(disk_io).filter(d => !Object.keys(Disk_IO).includes(d));
+
+  if (new_disks.length) {
+    for (let disk of new_disks) {
+      disk_io[disk] = {
+        read: Array(HISTORY_SIZE).fill(null),
+        write: Array(HISTORY_SIZE).fill(null),
+      };
+
+      const disk_option = document.createElement("option");
+      disk_option.value = disk;
+      disk_option.innerText = disk;
+      document.getElementById("disk-selector").appendChild(disk_option);
+
+      all_disks.splice(all_disks.length, 0, disk);
+    }
+  }
+
+  if (missing_disks.length) {
+    for (let disk of missing_disks) {
+      delete disk_io[disk];
+      document.getElementById("disk-selector").children[Array.from(document.getElementById("disk-selector").children).map(o => o.value).indexOf(disk)].remove();
+      all_disks.splice(all_disks.indexOf(disk), 1);
+      if (disk_to_show == disk) {
+        disk_to_show = all_disks[0];
+        document.getElementById("disk-selector").value = disk_to_show;
+      }
+    }
+  }
+  
+  for (let disk of Object.keys(disk_io).sort()) {
     disk_io[disk].read.splice(0, HISTORY_LAST, ...disk_io[disk].read.slice(1, HISTORY_LAST));
     disk_io[disk].read[HISTORY_LAST] = Disk_IO[disk].read;
     disk_io[disk].write.splice(0, HISTORY_LAST, ...disk_io[disk].write.slice(1, HISTORY_LAST));
@@ -531,7 +558,6 @@ function update_Disk_io({Disk_IO}) {
   DiskIoGhost.innerText = ghostTxt;
 }
 
-// const CpuTempGhost = document.getElementById("cpu_temp-ghost");
 function update_CPU_temp({CPU_Temp}) {
   const current_sensors = Object.keys(temp_sensors);
   Object.keys(CPU_Temp).map((sensor) => {
