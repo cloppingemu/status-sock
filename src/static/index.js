@@ -70,7 +70,7 @@ const layout_config = {
     updator: update_CPU_util,
   },
   CPU_temp: {
-    chart_title: "CPU Temp",
+    chart_title: "Temperature",
     y_title: "Temp (°C)",
     y_axis_max: 100,
     legend_traceorder: "normal",
