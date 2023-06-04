@@ -25,5 +25,4 @@ In order to use `status-sock.service` to launch the deployment server upon boot,
 
 TODO: 
 
- - `index.js` needs clean-up. Classes should have been used for all of the traces.
- - Updators have not been tested with AMD CPUs. CPU temperature sensors names may throw off the dash-board.
+ - `index.js` needs a clean-up. Classes, TS and some modern famework should have been used to manage state.
