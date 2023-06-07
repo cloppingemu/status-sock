@@ -24,6 +24,5 @@ In order to launch the deployment server upon boot, use `status-sock.service` as
 4. Run `systemd enable --now sock-status.service` to enable and launch the service. Dashboard server will be available at port 32000.
 
 
-TODO: 
-
+TODO:
  - `index.js` needs a clean-up. Classes, TS and some modern famework should have been used to manage state.
