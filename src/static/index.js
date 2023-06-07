@@ -5,6 +5,8 @@ let MAX_RAM_SIZE = 1;
 const LINE_SHAPE = 'spline';   // 'linear';
 const LINE_SMOOTHING = 1.0;    // Has an effect only if `shape` is set to "spline". Sets the amount of smoothing.
                                // "0" corresponds to no smoothing (equivalent to a "linear" shape).
+const LINE_WIDTH_THIN = 2;
+const LINE_WIDTH_NORMAL = 3;
 
 const HISTORY_TIME = 31;       // seconds
 const CONVERSION_FROM_B = {
@@ -215,10 +217,6 @@ function ChangePlot(event, key) {
 
 function UpdatePlotColors(scheme) {
   CpuUtilTraces[NUM_CPU_CORES].line.color = isDarkMode ? "#fff" : "#000";
-  if (Traces.CPU_temp.length > 2) {
-    Traces.CPU_temp[Object.keys(Traces.CPU_temp).length - 1].line.color = isDarkMode ? "#fff" : "#000"; 
-  }
-
   layout.plot_bgcolor = color_scheme_layout[scheme].plot_bgcolor;
   layout.paper_bgcolor = color_scheme_layout[scheme].paper_bgcolor;
   layout.yaxis.gridcolor = color_scheme_layout[scheme].gridcolor;
@@ -230,7 +228,6 @@ function UpdatePlotColors(scheme) {
 if (window.matchMedia) {
   window.matchMedia("(prefers-color-scheme: dark)").onchange = (change) => {
     isDarkMode = change.matches;
-    CpuUtilTraces[NUM_CPU_CORES].line.color = isDarkMode ? "#fff" : "#000";
     UpdatePlotColors(isDarkMode ? "dark" : "light");
     Plotly.redraw("Plot-Area");
   };
@@ -265,7 +262,7 @@ function SelectSensor(sensor) {
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: NUM_TEMP_SENSORS > 1.5 ? 1.5 : 3,
+        width: NUM_TEMP_SENSORS > LINE_WIDTH_THIN ? LINE_WIDTH_THIN : LINE_WIDTH_NORMAL,
       },
       showlegend: (NUM_TEMP_SENSORS <= 2) || (NUM_TEMP_SENSORS > 2 && i < 2)
     };
@@ -346,7 +343,7 @@ sio.on("status_init", (init) => {
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: 3
+        width: LINE_WIDTH_NORMAL
       }
     },
     {
@@ -356,7 +353,7 @@ sio.on("status_init", (init) => {
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: 3
+        width: LINE_WIDTH_NORMAL
       },
     }
   ];
@@ -369,7 +366,7 @@ sio.on("status_init", (init) => {
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: 3,
+        width: LINE_WIDTH_NORMAL,
         color: "#000"
       },
     },
@@ -381,7 +378,7 @@ sio.on("status_init", (init) => {
         line: {
           shape: LINE_SHAPE,
           smoothing: LINE_SMOOTHING,
-          width: 1
+          width: LINE_WIDTH_THIN
         },
       };
     })
@@ -397,7 +394,7 @@ sio.on("status_init", (init) => {
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: init.CPU_Temp[sensor_to_show].length > 1.5 ? 1.5 : 3,
+        width: init.CPU_Temp[sensor_to_show].length > LINE_WIDTH_THIN ? LINE_WIDTH_THIN : LINE_WIDTH_NORMAL,
       },
       showlegend: true
     };
@@ -411,7 +408,7 @@ sio.on("status_init", (init) => {
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: 3,
+        width: LINE_WIDTH_NORMAL,
       },
     },
     {
@@ -421,7 +418,7 @@ sio.on("status_init", (init) => {
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: 3,
+        width: LINE_WIDTH_NORMAL,
       },
     }
   ];
@@ -438,7 +435,7 @@ sio.on("status_init", (init) => {
      line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: 3
+        width: LINE_WIDTH_NORMAL
      },
      showlegend: true,
    },
@@ -449,7 +446,7 @@ sio.on("status_init", (init) => {
      line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: 3
+        width: LINE_WIDTH_NORMAL
      },
      showlegend: true,
    },
