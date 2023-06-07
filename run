@@ -3,7 +3,7 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 case $1 in
-  install | i)
+  env | e)
     if [ ! -f "$SCRIPT_DIR/env/bin/python" ]; then 
       virtualenv $SCRIPT_DIR/env
     fi
@@ -37,17 +37,21 @@ case $1 in
     echo "Usage:"
     echo "------"
     echo
-    echo "install: Install packages from $2 in env/bin/pip. Default file requirements.txt"
-    echo "  env/bin/python -m pip install -r $2"
+    echo "e/env: Create virtual environment named env and install packages from \$2. Defaults to package spec in requirements.txt"
+    echo "$ bash run e"
+    echo "    env/bin/python -m pip install -r \$2"
     echo
-    echo "test: Test updators"
-    echo "  env/bin/python src/updators.py"
+    echo "t/test: Test updators"
+    echo "$ bash run t"
+    echo "    env/bin/python src/updators.py"
     echo
-    echo "dev: Launch dev server"
-    echo "  env/bin/uvicorn main:app --host 0.0.0.0 --port 8080 --app-dir src --reload"
+    echo "d/dev: Launch dev server attached to port \$2. Defaults to port 8080."
+    echo "$ bash run d"
+    echo "    env/bin/uvicorn main:app --host 0.0.0.0 --port \$2 --app-dir src --reload"
     echo
-    echo "prod: Launch prod server"
-    echo "  env/bin/uvicorn main:app --host 0.0.0.0 --port 8080 --app-dir src"
+    echo "p/prod: Launch prod server attached to port \$2. Defaults to port 8080."
+    echo "$ bash run p"
+    echo "    env/bin/uvicorn main:app --host 0.0.0.0 --port \$2 --app-dir src"
     echo
     ;;
 esac
