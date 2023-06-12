@@ -15,6 +15,20 @@ const CONVERSION_FROM_B = {
   MB: 1024 * 1024,
   GB: 1024 * 1024 * 1024
 }
+const STORAGE_SIZE = ["B", "KB", "MB", "GB"];
+
+const CPU_AVG_TAG = "Avg";
+const CPU_TAG = "Core";
+
+const RAM_TAG = "RAM";
+const SWAP_TAG = "Swap";
+
+const NET_IO_TAGS = ["Tx", "Rx"];
+
+const SENSOR_TAGS = ["Max", "Avg"];
+const DISK_IO_TAGS = ["R", "W"];
+
+const YAXIS_MAX_MULTIPLIER = 1.25;
 
 let trace = "CPU_util";
 let NUM_TESTER = /[0-9]/;
@@ -248,8 +262,8 @@ function SelectSensor(sensor) {
     let nameMax = '';
     let nameAv = '';
     if (NUM_TEMP_SENSORS > 2) {
-      nameMax = `max: ${Math.ceil(Math.max(...temp_sensors[sensor_to_show][HISTORY_LAST]))}° C`;
-      nameAv = `avg: ${Math.round(temp_sensors[sensor_to_show][HISTORY_LAST].reduce((a,b) => a+b) / NUM_TEMP_SENSORS)}° C`;
+      nameMax = `${SENSOR_TAGS[0]}: ${Math.ceil(Math.max(...temp_sensors[sensor_to_show][HISTORY_LAST]))}° C`;
+      nameAv = `${SENSOR_TAGS[1]}: ${Math.round(temp_sensors[sensor_to_show][HISTORY_LAST].reduce((a,b) => a+b) / NUM_TEMP_SENSORS)}° C`;
     } else {
       nameMax = `${sensor_to_show} ${i}: ${temp_sensors[sensor_to_show][HISTORY_LAST][i]}° C`;
       nameAv = `${sensor_to_show} ${i}: ${temp_sensors[sensor_to_show][HISTORY_LAST][i]}° C`;
@@ -283,15 +297,19 @@ function DiskSelect(disk) {
     update_disk_io_trace();
 
     if (layout_config.Disk_io.y_axis_max < 1) {
-      disk_io_unit = disk_io_unit === "GB" ? "MB" : disk_io_unit === "MB" ? "KB" : disk_io_unit === "KB" ? "B" : "B";
+      disk_io_unit = disk_io_unit === STORAGE_SIZE[3] ? STORAGE_SIZE[2] : disk_io_unit === STORAGE_SIZE[2] ? STORAGE_SIZE[1] : disk_io_unit === STORAGE_SIZE[1] ? STORAGE_SIZE[0] : STORAGE_SIZE[0];
       update_disk_io_trace();
     } else if (layout_config.Disk_io.y_axis_max > 1024) {
-      disk_io_unit = disk_io_unit === "B" ? "KB" : disk_io_unit === "KB" ? "MB" : disk_io_unit === "MB" ? "GB" : "GB";
+      disk_io_unit = disk_io_unit === STORAGE_SIZE[0] ? STORAGE_SIZE[1] : disk_io_unit === STORAGE_SIZE[1] ? STORAGE_SIZE[2] : disk_io_unit === STORAGE_SIZE[2] ? STORAGE_SIZE[3] : STORAGE_SIZE[3];
       update_disk_io_trace();
     }
-
-    layout_config.Disk_io.y_axis_max = layout_config.Disk_io.y_axis_max * 1.25;
+    layout_config.Disk_io.y_axis_max = layout_config.Disk_io.y_axis_max * YAXIS_MAX_MULTIPLIER;
     layout_config.Disk_io.y_title = `Disk IO (${disk_io_unit}ps)`;
+
+    const readText = `${DISK_IO_TAGS[0]}: ${clip10(disk_io[disk].read[HISTORY_LAST] / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
+    const writeText = `${DISK_IO_TAGS[1]}: ${clip10(disk_io[disk].write[HISTORY_LAST] / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
+    const ghostTxt = disk_io[disk].read[HISTORY_LAST] == 0 && disk_io[disk].write[HISTORY_LAST] == 0 ? `Idle` : disk_io[disk].read[HISTORY_LAST] > disk_io[disk].write[HISTORY_LAST] ? readText : writeText;
+    DiskIoGhost.innerText = ghostTxt;
   }
 }
 
@@ -362,7 +380,7 @@ sio.on("status_init", (init) => {
     {
       x: time,
       y: Array(HISTORY_SIZE).fill(null),
-      name: "CPU avg",
+      name: `${CPU_AVG_TAG}`,
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
@@ -374,7 +392,7 @@ sio.on("status_init", (init) => {
       return {
         x: time,
         y: Array(HISTORY_SIZE).fill(null),
-        name: `Core ${i}`,
+        name: `${CPU_TAG} ${i}`,
         line: {
           shape: LINE_SHAPE,
           smoothing: LINE_SMOOTHING,
@@ -431,7 +449,7 @@ sio.on("status_init", (init) => {
    {
      x: time,
      y: Array(HISTORY_SIZE).fill(null),
-     name: "Tx",
+     name: `${NET_IO_TAGS[0]}`,
      line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
@@ -442,7 +460,7 @@ sio.on("status_init", (init) => {
    {
      x: time,
      y: Array(HISTORY_SIZE).fill(null),
-     name: "Rx",
+     name: `${NET_IO_TAGS[1]}`,
      line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
@@ -500,8 +518,8 @@ function update_disk_io_trace() {
   DiskIoTraces[0].y = disk_io[disk_to_show].read.map(v => v === null ? v : v/CONVERSION_FROM_B[disk_io_unit] / REFRESH_PERIOD);
   DiskIoTraces[1].y = disk_io[disk_to_show].write.map(v => v === null ? v : v/CONVERSION_FROM_B[disk_io_unit] / REFRESH_PERIOD);
 
-  DiskIoTraces[0].name = `R: ${DiskIoTraces[0].y[HISTORY_LAST].toFixed(1)} ${disk_io_unit}ps`;
-  DiskIoTraces[1].name = `W: ${DiskIoTraces[1].y[HISTORY_LAST].toFixed(1)} ${disk_io_unit}ps`;
+  DiskIoTraces[0].name = `${DISK_IO_TAGS[0]}: ${DiskIoTraces[0].y[HISTORY_LAST].toFixed(1)} ${disk_io_unit}ps`;
+  DiskIoTraces[1].name = `${DISK_IO_TAGS[1]}: ${DiskIoTraces[1].y[HISTORY_LAST].toFixed(1)} ${disk_io_unit}ps`;
 
   layout_config.Disk_io.y_axis_max = Math.max(
     0.8, ...DiskIoTraces[0].y, ...DiskIoTraces[1].y
@@ -555,10 +573,10 @@ function update_Disk_io({Disk_IO}) {
     disk_io_unit = disk_io_unit === "B" ? "KB" : disk_io_unit === "KB" ? "MB" : disk_io_unit === "MB" ? "GB" : "GB";
     update_disk_io_trace();
   }
-  layout_config.Disk_io.y_axis_max = Math.max(0.8, layout_config.Disk_io.y_axis_max) * 1.25;
+  layout_config.Disk_io.y_axis_max = Math.max(0.8, layout_config.Disk_io.y_axis_max) * YAXIS_MAX_MULTIPLIER;
 
-  const readText = `R: ${clip10(Disk_IO[disk_to_show].read / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
-  const writeText = `W: ${clip10(Disk_IO[disk_to_show].write / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
+  const readText = `${DISK_IO_TAGS[0]}: ${clip10(Disk_IO[disk_to_show].read / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
+  const writeText = `${DISK_IO_TAGS[1]}: ${clip10(Disk_IO[disk_to_show].write / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
   const ghostTxt = Disk_IO[disk_to_show].read == 0 && Disk_IO[disk_to_show].write == 0 ? `Idle` : Disk_IO[disk_to_show].read > Disk_IO[disk_to_show].write ? readText : writeText;
   DiskIoGhost.innerText = ghostTxt;
 }
@@ -570,8 +588,8 @@ function update_CPU_temp({CPU_Temp}) {
   });
 
   if (CPU_Temp[sensor_to_show].length > 2) {
-    Traces.CPU_temp[0].name = `max: ${Math.ceil(Math.max(...temp_sensors[sensor_to_show][HISTORY_LAST]))}° C`;
-    Traces.CPU_temp[1].name = `avg: ${Math.round(
+    Traces.CPU_temp[0].name = `${SENSOR_TAGS[1]}: ${Math.ceil(Math.max(...temp_sensors[sensor_to_show][HISTORY_LAST]))}° C`;
+    Traces.CPU_temp[1].name = `${SENSOR_TAGS[1]}: ${Math.round(
       CPU_Temp[sensor_to_show].reduce((a,b) => a+b) / CPU_Temp[sensor_to_show].length
     )}° C`;
     for (let i in CPU_Temp[sensor_to_show]) {
@@ -588,14 +606,14 @@ function update_CPU_temp({CPU_Temp}) {
 const CpuUtilGhost = document.getElementById("cpu_util-ghost");
 function update_CPU_util({CPU_Util}) {
   for (let cpu_key in Array(NUM_CPU_CORES).fill(0)) {
-    CpuUtilTraces[cpu_key].name = `Core ${cpu_key}: ${CPU_Util[cpu_key].toFixed(1)}%`;
+    CpuUtilTraces[cpu_key].name = `${CPU_TAG} ${cpu_key}: ${CPU_Util[cpu_key].toFixed(1)}%`;
     CpuUtilTraces[cpu_key].showlegend = false;
     CpuUtilTraces[cpu_key].y.splice(0, HISTORY_LAST, ...CpuUtilTraces[cpu_key].y.slice(1, HISTORY_LAST));
     CpuUtilTraces[cpu_key].y[HISTORY_LAST] = CPU_Util[cpu_key];
   }
 
   const cpu_util_av = (CPU_Util.reduce((a, b) => a - -b)/NUM_CPU_CORES);
-  CpuUtilTraces[NUM_CPU_CORES].name = `CPU avg: ${cpu_util_av.toFixed(1)}%`;
+  CpuUtilTraces[NUM_CPU_CORES].name = `${CPU_AVG_TAG}: ${cpu_util_av.toFixed(1)}%`;
   CpuUtilTraces[NUM_CPU_CORES].y.splice(0, HISTORY_LAST, ...CpuUtilTraces[NUM_CPU_CORES].y.slice(1, HISTORY_LAST));
   CpuUtilTraces[NUM_CPU_CORES].y[HISTORY_LAST] = cpu_util_av;
 
@@ -609,9 +627,9 @@ function update_CPU_util({CPU_Util}) {
 
 function update_memory_trace() {
   MemTraces[0].y = mem_util.ram.map(v => v===null ? v : parseFloat(v) / CONVERSION_FROM_B[memory_unit]);
-  MemTraces[0].name = `RAM: ${MemTraces[0].y[HISTORY_LAST].toFixed(1)} ${memory_unit}`;
+  MemTraces[0].name = `${RAM_TAG}: ${MemTraces[0].y[HISTORY_LAST].toFixed(1)} ${memory_unit}`;
   MemTraces[1].y = mem_util.swap.map(v => v===null ? v : parseFloat(v) / CONVERSION_FROM_B[memory_unit]);
-  MemTraces[1].name = `Swap: ${MemTraces[1].y[HISTORY_LAST].toFixed(1)} ${memory_unit}`;
+  MemTraces[1].name = `${SWAP_TAG}: ${MemTraces[1].y[HISTORY_LAST].toFixed(1)} ${memory_unit}`;
   layout_config.Memory.y_axis_max = Math.max(...mem_util.ram, ...mem_util.swap) / CONVERSION_FROM_B[memory_unit];
 }
 const MemoryUtilGhost = document.getElementById("mem-ghost");
@@ -628,7 +646,7 @@ function update_Memory({Memory}) {
     memory_unit = memory_unit === "B" ? "KB" : memory_unit === "KB" ? "MB" : memory_unit === "MB" ? "GB" : "GB";
     update_memory_trace();
   }
-  layout_config.Memory.y_axis_max = layout_config.Memory.y_axis_max * 1.25;
+  layout_config.Memory.y_axis_max = layout_config.Memory.y_axis_max * YAXIS_MAX_MULTIPLIER;
 
   let MemUtilGhostText = mem_util.ram[HISTORY_LAST] / CONVERSION_FROM_B[memory_unit];
   MemUtilGhostText = MemUtilGhostText < 10 ? MemUtilGhostText.toFixed(1) : MemUtilGhostText.toFixed(0);
@@ -638,8 +656,8 @@ function update_Memory({Memory}) {
 function update_network_io_trace() {
   NetworkIoTraces[0].y = network_io.tx.map(x => x === null ? null : x/CONVERSION_FROM_B[network_io_unit] / REFRESH_PERIOD);
   NetworkIoTraces[1].y = network_io.rx.map(x => x === null ? null : x/CONVERSION_FROM_B[network_io_unit] / REFRESH_PERIOD);
-  NetworkIoTraces[0].name = `Tx: ${NetworkIoTraces[0].y[HISTORY_LAST].toFixed(1)} ${network_io_unit}ps`;
-  NetworkIoTraces[1].name = `Rx: ${NetworkIoTraces[1].y[HISTORY_LAST].toFixed(1)} ${network_io_unit}ps`;
+  NetworkIoTraces[0].name = `${NET_IO_TAGS[0]}: ${NetworkIoTraces[0].y[HISTORY_LAST].toFixed(1)} ${network_io_unit}ps`;
+  NetworkIoTraces[1].name = `${NET_IO_TAGS[1]}: ${NetworkIoTraces[1].y[HISTORY_LAST].toFixed(1)} ${network_io_unit}ps`;
   layout_config.Network_io.y_axis_max = Math.max(
     ...NetworkIoTraces[0].y,
     ...NetworkIoTraces[1].y,
@@ -659,7 +677,7 @@ function update_Neteork_io({Network_IO}) {
     network_io_unit = network_io_unit === "B" ? "KB" : network_io_unit === "KB" ? "MB" : network_io_unit === "MB" ? "GB" : "GB";
     update_network_io_trace();
   }
-  layout_config.Network_io.y_axis_max = layout_config.Network_io.y_axis_max * 1.25;
+  layout_config.Network_io.y_axis_max = layout_config.Network_io.y_axis_max * YAXIS_MAX_MULTIPLIER;
 
   const rxGhost = clip10(network_io.rx[HISTORY_LAST] / CONVERSION_FROM_B[network_io_unit], 1);
   const txGhost = clip10(network_io.tx[HISTORY_LAST] / CONVERSION_FROM_B[network_io_unit], 1);
