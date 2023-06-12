@@ -6,7 +6,8 @@ const LINE_SHAPE = 'spline';   // 'linear';
 const LINE_SMOOTHING = 1.0;    // Has an effect only if `shape` is set to "spline". Sets the amount of smoothing.
                                // "0" corresponds to no smoothing (equivalent to a "linear" shape).
 const LINE_WIDTH_THIN = 1;
-const LINE_WIDTH_NORMAL = 3;
+const LINE_WIDTH_NORMAL = 2;
+const LINE_WIDTH_THICK = 3;
 
 const HISTORY_TIME = 31;       // seconds
 const CONVERSION_FROM_B = {
@@ -271,7 +272,7 @@ function SelectSensor(sensor) {
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: NUM_TEMP_SENSORS > LINE_WIDTH_THIN ? LINE_WIDTH_THIN : LINE_WIDTH_NORMAL,
+        width: NUM_TEMP_SENSORS > LINE_WIDTH_NORMAL ? LINE_WIDTH_NORMAL : LINE_WIDTH_THICK,
       },
       showlegend: (NUM_TEMP_SENSORS <= 2) || (NUM_TEMP_SENSORS > 2 && i < 2)
     };
@@ -356,7 +357,7 @@ sio.on("status_init", (init) => {
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: LINE_WIDTH_NORMAL
+        width: LINE_WIDTH_THICK
       }
     },
     {
@@ -366,7 +367,7 @@ sio.on("status_init", (init) => {
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: LINE_WIDTH_NORMAL
+        width: LINE_WIDTH_THICK
       },
     }
   ];
@@ -379,7 +380,7 @@ sio.on("status_init", (init) => {
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: LINE_WIDTH_NORMAL,
+        width: LINE_WIDTH_THICK,
         color: "#000"
       },
     },
@@ -407,7 +408,7 @@ sio.on("status_init", (init) => {
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: init.CPU_Temp[sensor_to_show].length > LINE_WIDTH_THIN ? LINE_WIDTH_THIN : LINE_WIDTH_NORMAL,
+        width: init.CPU_Temp[sensor_to_show].length > LINE_WIDTH_NORMAL ? LINE_WIDTH_NORMAL : LINE_WIDTH_THICK,
       },
       showlegend: true
     };
@@ -421,7 +422,7 @@ sio.on("status_init", (init) => {
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: LINE_WIDTH_NORMAL,
+        width: LINE_WIDTH_THICK,
       },
     },
     {
@@ -431,7 +432,7 @@ sio.on("status_init", (init) => {
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: LINE_WIDTH_NORMAL,
+        width: LINE_WIDTH_THICK,
       },
     }
   ];
@@ -448,7 +449,7 @@ sio.on("status_init", (init) => {
      line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: LINE_WIDTH_NORMAL
+        width: LINE_WIDTH_THICK
      },
      showlegend: true,
    },
@@ -459,7 +460,7 @@ sio.on("status_init", (init) => {
      line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
-        width: LINE_WIDTH_NORMAL
+        width: LINE_WIDTH_THICK
      },
      showlegend: true,
    },
