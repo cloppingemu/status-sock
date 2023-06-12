@@ -5,7 +5,7 @@ let MAX_RAM_SIZE = 1;
 const LINE_SHAPE = 'spline';   // 'linear';
 const LINE_SMOOTHING = 1.0;    // Has an effect only if `shape` is set to "spline". Sets the amount of smoothing.
                                // "0" corresponds to no smoothing (equivalent to a "linear" shape).
-const LINE_WIDTH_THIN = 2;
+const LINE_WIDTH_THIN = 1;
 const LINE_WIDTH_NORMAL = 3;
 
 const HISTORY_TIME = 31;       // seconds
@@ -17,14 +17,9 @@ const CONVERSION_FROM_B = {
 }
 const STORAGE_SIZE = ["B", "KB", "MB", "GB"];
 
-const CPU_AVG_TAG = "Avg";
-const CPU_TAG = "Core";
-
-const RAM_TAG = "RAM";
-const SWAP_TAG = "Swap";
-
+const CPU_UTIL_TAG = ["Avg", "Core"];
+const MEMORY_TAG = ["RAM", "Swap"];
 const NET_IO_TAGS = ["Tx", "Rx"];
-
 const SENSOR_TAGS = ["Max", "Avg"];
 const DISK_IO_TAGS = ["R", "W"];
 
@@ -380,7 +375,7 @@ sio.on("status_init", (init) => {
     {
       x: time,
       y: Array(HISTORY_SIZE).fill(null),
-      name: `${CPU_AVG_TAG}`,
+      name: `${CPU_UTIL_TAG[0]}`,
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
@@ -392,7 +387,7 @@ sio.on("status_init", (init) => {
       return {
         x: time,
         y: Array(HISTORY_SIZE).fill(null),
-        name: `${CPU_TAG} ${i}`,
+        name: `${CPU_UTIL_TAG[1]} ${i}`,
         line: {
           shape: LINE_SHAPE,
           smoothing: LINE_SMOOTHING,
@@ -588,7 +583,7 @@ function update_CPU_temp({CPU_Temp}) {
   });
 
   if (CPU_Temp[sensor_to_show].length > 2) {
-    Traces.CPU_temp[0].name = `${SENSOR_TAGS[1]}: ${Math.ceil(Math.max(...temp_sensors[sensor_to_show][HISTORY_LAST]))}° C`;
+    Traces.CPU_temp[0].name = `${SENSOR_TAGS[0]}: ${Math.ceil(Math.max(...temp_sensors[sensor_to_show][HISTORY_LAST]))}° C`;
     Traces.CPU_temp[1].name = `${SENSOR_TAGS[1]}: ${Math.round(
       CPU_Temp[sensor_to_show].reduce((a,b) => a+b) / CPU_Temp[sensor_to_show].length
     )}° C`;
@@ -606,14 +601,14 @@ function update_CPU_temp({CPU_Temp}) {
 const CpuUtilGhost = document.getElementById("cpu_util-ghost");
 function update_CPU_util({CPU_Util}) {
   for (let cpu_key in Array(NUM_CPU_CORES).fill(0)) {
-    CpuUtilTraces[cpu_key].name = `${CPU_TAG} ${cpu_key}: ${CPU_Util[cpu_key].toFixed(1)}%`;
+    CpuUtilTraces[cpu_key].name = `${CPU_UTIL_TAG[1]} ${cpu_key}: ${CPU_Util[cpu_key].toFixed(1)}%`;
     CpuUtilTraces[cpu_key].showlegend = false;
     CpuUtilTraces[cpu_key].y.splice(0, HISTORY_LAST, ...CpuUtilTraces[cpu_key].y.slice(1, HISTORY_LAST));
     CpuUtilTraces[cpu_key].y[HISTORY_LAST] = CPU_Util[cpu_key];
   }
 
   const cpu_util_av = (CPU_Util.reduce((a, b) => a - -b)/NUM_CPU_CORES);
-  CpuUtilTraces[NUM_CPU_CORES].name = `${CPU_AVG_TAG}: ${cpu_util_av.toFixed(1)}%`;
+  CpuUtilTraces[NUM_CPU_CORES].name = `${CPU_UTIL_TAG[0]}: ${cpu_util_av.toFixed(1)}%`;
   CpuUtilTraces[NUM_CPU_CORES].y.splice(0, HISTORY_LAST, ...CpuUtilTraces[NUM_CPU_CORES].y.slice(1, HISTORY_LAST));
   CpuUtilTraces[NUM_CPU_CORES].y[HISTORY_LAST] = cpu_util_av;
 
@@ -627,9 +622,9 @@ function update_CPU_util({CPU_Util}) {
 
 function update_memory_trace() {
   MemTraces[0].y = mem_util.ram.map(v => v===null ? v : parseFloat(v) / CONVERSION_FROM_B[memory_unit]);
-  MemTraces[0].name = `${RAM_TAG}: ${MemTraces[0].y[HISTORY_LAST].toFixed(1)} ${memory_unit}`;
+  MemTraces[0].name = `${MEMORY_TAG[0]}: ${MemTraces[0].y[HISTORY_LAST].toFixed(1)} ${memory_unit}`;
   MemTraces[1].y = mem_util.swap.map(v => v===null ? v : parseFloat(v) / CONVERSION_FROM_B[memory_unit]);
-  MemTraces[1].name = `${SWAP_TAG}: ${MemTraces[1].y[HISTORY_LAST].toFixed(1)} ${memory_unit}`;
+  MemTraces[1].name = `${MEMORY_TAG[1]}: ${MemTraces[1].y[HISTORY_LAST].toFixed(1)} ${memory_unit}`;
   layout_config.Memory.y_axis_max = Math.max(...mem_util.ram, ...mem_util.swap) / CONVERSION_FROM_B[memory_unit];
 }
 const MemoryUtilGhost = document.getElementById("mem-ghost");

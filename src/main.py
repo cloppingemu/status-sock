@@ -1,13 +1,13 @@
 import os
-import time
-import updators
-
 import asyncio
 import socketio
 
 from socket import gethostname
 
-REFRESH_PERIOD = 1 # second
+import updators
+
+
+REFRESH_PERIOD = 1  # second
 
 STATIC_FILES_DIR = f"{os.path.dirname(__file__)}/static"
 
