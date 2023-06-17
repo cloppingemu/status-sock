@@ -261,8 +261,8 @@ function SelectSensor(sensor) {
       nameMax = `${SENSOR_TAGS[0]}: ${Math.ceil(Math.max(...temp_sensors[sensor_to_show][HISTORY_LAST]))}° C`;
       nameAv = `${SENSOR_TAGS[1]}: ${Math.round(temp_sensors[sensor_to_show][HISTORY_LAST].reduce((a,b) => a+b) / NUM_TEMP_SENSORS)}° C`;
     } else {
-      nameMax = `${sensor_to_show} ${i}: ${temp_sensors[sensor_to_show][HISTORY_LAST][i]}° C`;
-      nameAv = `${sensor_to_show} ${i}: ${temp_sensors[sensor_to_show][HISTORY_LAST][i]}° C`;
+      nameMax = `${sensor_to_show} ${i}: ${Math.round(temp_sensors[sensor_to_show][HISTORY_LAST][i])}° C`;
+      nameAv = `${sensor_to_show} ${i}: ${Math.round(temp_sensors[sensor_to_show][HISTORY_LAST][i])}° C`;
     }
 
     return {
