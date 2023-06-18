@@ -24,7 +24,38 @@ const NET_IO_TAGS = ["Tx", "Rx"];
 const SENSOR_TAGS = ["Max", "Avg"];
 const DISK_IO_TAGS = ["R", "W"];
 
+function bisectRight(val, maps) {
+  /*
+    bisectRight(0, {a:1, b:3, c:5}) -> a
+    bisectRight(1, {a:1, b:3, c:5}) -> b
+    bisectRight(2, {a:1, b:3, c:5}) -> b
+    bisectRight(3, {a:1, b:3, c:5}) -> c
+    bisectRight(4, {a:1, b:3, c:5}) -> c
+    bisectRight(5, {a:1, b:3, c:5}) -> c
+    bisectRight(6, {a:1, b:3, c:5}) -> c
+  */
+  const labels = Object.keys(maps).sort((a, b) => maps[a] - maps[b])
+  const eligible = labels.filter(l => maps[l] > val);
+  return eligible[0] == undefined ? labels[labels.length - 1] : eligible[0];
+}
+
+function bisectLeft(val, maps) {
+  /*
+    bisectLeft(0, {a:1, b:3, c:5}) -> 'a'
+    bisectLeft(1, {a:1, b:3, c:5}) -> 'a'
+    bisectLeft(2, {a:1, b:3, c:5}) -> 'a'
+    bisectLeft(3, {a:1, b:3, c:5}) -> 'a'
+    bisectLeft(4, {a:1, b:3, c:5}) -> 'b'
+    bisectLeft(5, {a:1, b:3, c:5}) -> 'b'
+    bisectLeft(6, {a:1, b:3, c:5}) -> 'c'
+  */
+  const labels = Object.keys(maps).sort((a, b) => maps[a] - maps[b])
+  const eligible = labels.filter(l => maps[l] < val);
+  return eligible[0] == undefined ? labels[0] : eligible[eligible.length - 1];
+}
+
 const YAXIS_MAX_MULTIPLIER = 1.25;
+const YAXIS_MIN = 1 / YAXIS_MAX_MULTIPLIER;
 
 let trace = "CPU_util";
 let NUM_TESTER = /[0-9]/;
@@ -63,8 +94,16 @@ function clip10(c, n) {
 
 
 let network_io_unit = "KB";
+let tx_io_unit = "KB";
+let rx_io_unit = "KB";
+
 let disk_io_unit = "MB";
+let read_io_unit = "MB";
+let write_io_unit = "MB";
+
 let memory_unit = "GB"
+let ram_unit = "GB"
+let swap_unit = "GB"
 
 const layout_config = {
   Memory: {
@@ -290,16 +329,20 @@ function DiskSelect(disk) {
   disk_to_show = disk;
 
   if (trace == "Disk_io") {
+
+    disk_io_unit = bisectLeft(Math.max(
+      YAXIS_MIN,
+      ...disk_io[disk_to_show].read,
+      ...disk_io[disk_to_show].write
+    ), CONVERSION_FROM_B);
+    read_io_unit = bisectLeft(Math.max(
+      YAXIS_MIN, ...disk_io[disk_to_show].read
+    ), CONVERSION_FROM_B);
+    write_io_unit = bisectLeft(Math.max(
+      YAXIS_MIN, ...disk_io[disk_to_show].write
+    ), CONVERSION_FROM_B);  
     update_disk_io_trace();
 
-    if (layout_config.Disk_io.y_axis_max < 1) {
-      disk_io_unit = disk_io_unit === STORAGE_SIZE[3] ? STORAGE_SIZE[2] : disk_io_unit === STORAGE_SIZE[2] ? STORAGE_SIZE[1] : disk_io_unit === STORAGE_SIZE[1] ? STORAGE_SIZE[0] : STORAGE_SIZE[0];
-      update_disk_io_trace();
-    } else if (layout_config.Disk_io.y_axis_max > 1024) {
-      disk_io_unit = disk_io_unit === STORAGE_SIZE[0] ? STORAGE_SIZE[1] : disk_io_unit === STORAGE_SIZE[1] ? STORAGE_SIZE[2] : disk_io_unit === STORAGE_SIZE[2] ? STORAGE_SIZE[3] : STORAGE_SIZE[3];
-      update_disk_io_trace();
-    }
-    layout_config.Disk_io.y_axis_max = layout_config.Disk_io.y_axis_max * YAXIS_MAX_MULTIPLIER;
     layout_config.Disk_io.y_title = `Disk IO (${disk_io_unit}ps)`;
 
     const readText = `${DISK_IO_TAGS[0]}: ${clip10(disk_io[disk].read[HISTORY_LAST] / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
@@ -511,15 +554,21 @@ sio.on("status_init", (init) => {
 });
 
 function update_disk_io_trace() {
+  disk_io_unit = bisectLeft(Math.max(
+    YAXIS_MIN,
+    ...disk_io[disk_to_show].read,
+    ...disk_io[disk_to_show].write
+  ), CONVERSION_FROM_B);
+
   DiskIoTraces[0].y = disk_io[disk_to_show].read.map(v => v === null ? v : v/CONVERSION_FROM_B[disk_io_unit] / REFRESH_PERIOD);
   DiskIoTraces[1].y = disk_io[disk_to_show].write.map(v => v === null ? v : v/CONVERSION_FROM_B[disk_io_unit] / REFRESH_PERIOD);
 
-  DiskIoTraces[0].name = `${DISK_IO_TAGS[0]}: ${DiskIoTraces[0].y[HISTORY_LAST].toFixed(1)} ${disk_io_unit}ps`;
-  DiskIoTraces[1].name = `${DISK_IO_TAGS[1]}: ${DiskIoTraces[1].y[HISTORY_LAST].toFixed(1)} ${disk_io_unit}ps`;
+  DiskIoTraces[0].name = `${DISK_IO_TAGS[0]}: ${(disk_io[disk_to_show].read[HISTORY_LAST]/CONVERSION_FROM_B[read_io_unit]).toFixed(1)} ${read_io_unit}ps`;
+  DiskIoTraces[1].name = `${DISK_IO_TAGS[1]}: ${(disk_io[disk_to_show].write[HISTORY_LAST]/CONVERSION_FROM_B[write_io_unit]).toFixed(1)} ${write_io_unit}ps`;
 
   layout_config.Disk_io.y_axis_max = Math.max(
-    0.8, ...DiskIoTraces[0].y, ...DiskIoTraces[1].y
-  );
+    YAXIS_MIN, ...DiskIoTraces[0].y, ...DiskIoTraces[1].y
+  ) * YAXIS_MAX_MULTIPLIER;
 }
 const DiskIoGhost = document.getElementById("disk-ghost");
 function update_Disk_io({Disk_IO}) {
@@ -532,12 +581,10 @@ function update_Disk_io({Disk_IO}) {
         read: Array(HISTORY_SIZE).fill(null),
         write: Array(HISTORY_SIZE).fill(null),
       };
-
       const disk_option = document.createElement("option");
       disk_option.value = disk;
       disk_option.innerText = disk;
       document.getElementById("disk-selector").appendChild(disk_option);
-
       all_disks.splice(all_disks.length, 0, disk);
     }
   }
@@ -553,26 +600,24 @@ function update_Disk_io({Disk_IO}) {
       }
     }
   }
-  
+
   for (let disk of Object.keys(disk_io).sort()) {
     disk_io[disk].read.splice(0, HISTORY_LAST, ...disk_io[disk].read.slice(1, HISTORY_LAST));
-    disk_io[disk].read[HISTORY_LAST] = Disk_IO[disk].read;
     disk_io[disk].write.splice(0, HISTORY_LAST, ...disk_io[disk].write.slice(1, HISTORY_LAST));
+    disk_io[disk].read[HISTORY_LAST] = Disk_IO[disk].read;
     disk_io[disk].write[HISTORY_LAST] = Disk_IO[disk].write;
   }
 
+  read_io_unit = bisectLeft(Math.max(
+    YAXIS_MIN, ...disk_io[disk_to_show].read
+  ), CONVERSION_FROM_B);
+  write_io_unit = bisectLeft(Math.max(
+    YAXIS_MIN, ...disk_io[disk_to_show].write
+  ), CONVERSION_FROM_B);
   update_disk_io_trace();
-  if (layout_config.Disk_io.y_axis_max < 1) {
-    disk_io_unit = disk_io_unit === "GB" ? "MB" : disk_io_unit === "MB" ? "KB" : disk_io_unit === "KB" ? "B" : "B";
-    update_disk_io_trace();
-  } else if (layout_config.Disk_io.y_axis_max > 1024) {
-    disk_io_unit = disk_io_unit === "B" ? "KB" : disk_io_unit === "KB" ? "MB" : disk_io_unit === "MB" ? "GB" : "GB";
-    update_disk_io_trace();
-  }
-  layout_config.Disk_io.y_axis_max = Math.max(0.8, layout_config.Disk_io.y_axis_max) * YAXIS_MAX_MULTIPLIER;
 
-  const readText = `${DISK_IO_TAGS[0]}: ${clip10(Disk_IO[disk_to_show].read / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
-  const writeText = `${DISK_IO_TAGS[1]}: ${clip10(Disk_IO[disk_to_show].write / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
+  const readText = `${DISK_IO_TAGS[0]}: ${clip10(Disk_IO[disk_to_show].read / CONVERSION_FROM_B[read_io_unit], 1)}${read_io_unit}ps`;
+  const writeText = `${DISK_IO_TAGS[1]}: ${clip10(Disk_IO[disk_to_show].write / CONVERSION_FROM_B[write_io_unit], 1)}${write_io_unit}ps`;
   const ghostTxt = Disk_IO[disk_to_show].read == 0 && Disk_IO[disk_to_show].write == 0 ? `Idle` : Disk_IO[disk_to_show].read > Disk_IO[disk_to_show].write ? readText : writeText;
   DiskIoGhost.innerText = ghostTxt;
 }
@@ -622,42 +667,48 @@ function update_CPU_util({CPU_Util}) {
 }
 
 function update_memory_trace() {
+  swap_unit = bisectLeft(Math.max(YAXIS_MIN, ...mem_util.swap), CONVERSION_FROM_B);
+  memory_unit = bisectLeft(Math.max(YAXIS_MIN, ...mem_util.ram, ...mem_util.swap), CONVERSION_FROM_B);
+
   MemTraces[0].y = mem_util.ram.map(v => v===null ? v : parseFloat(v) / CONVERSION_FROM_B[memory_unit]);
-  MemTraces[0].name = `${MEMORY_TAG[0]}: ${MemTraces[0].y[HISTORY_LAST].toFixed(1)} ${memory_unit}`;
   MemTraces[1].y = mem_util.swap.map(v => v===null ? v : parseFloat(v) / CONVERSION_FROM_B[memory_unit]);
-  MemTraces[1].name = `${MEMORY_TAG[1]}: ${MemTraces[1].y[HISTORY_LAST].toFixed(1)} ${memory_unit}`;
-  layout_config.Memory.y_axis_max = Math.max(...mem_util.ram, ...mem_util.swap) / CONVERSION_FROM_B[memory_unit];
+
+  MemTraces[0].name = `${MEMORY_TAG[0]}: ${(parseFloat(mem_util.ram[HISTORY_LAST]) / CONVERSION_FROM_B[ram_unit]).toFixed(1)} ${ram_unit}`;
+  MemTraces[1].name = `${MEMORY_TAG[1]}: ${(parseFloat(mem_util.swap[HISTORY_LAST]) / CONVERSION_FROM_B[swap_unit]).toFixed(1)} ${swap_unit}`;
+
+  layout_config.Memory.y_axis_max = Math.max(
+    ...mem_util.ram, ...mem_util.swap
+  ) / CONVERSION_FROM_B[memory_unit]  * YAXIS_MAX_MULTIPLIER;
 }
 const MemoryUtilGhost = document.getElementById("mem-ghost");
 function update_Memory({Memory}) {
   mem_util.ram.splice(0, HISTORY_LAST, ...mem_util.ram.slice(1, HISTORY_LAST));
-  mem_util.ram[HISTORY_LAST] = Memory.RAM;
   mem_util.swap.splice(0, HISTORY_LAST, ...mem_util.swap.slice(1, HISTORY_LAST));
+  mem_util.ram[HISTORY_LAST] = Memory.RAM;
   mem_util.swap[HISTORY_LAST] = Memory.Swap;
-  update_memory_trace();
-  if (layout_config.Memory.y_axis_max < 1) {
-    memory_unit = memory_unit === "GB" ? "MB" : memory_unit === "MB" ? "KB" : memory_unit === "KB" ? "B" : "B";
-    update_memory_trace();
-  } else if (layout_config.Memory.y_axis_max > 1024) {
-    memory_unit = memory_unit === "B" ? "KB" : memory_unit === "KB" ? "MB" : memory_unit === "MB" ? "GB" : "GB";
-    update_memory_trace();
-  }
-  layout_config.Memory.y_axis_max = layout_config.Memory.y_axis_max * YAXIS_MAX_MULTIPLIER;
 
-  let MemUtilGhostText = mem_util.ram[HISTORY_LAST] / CONVERSION_FROM_B[memory_unit];
-  MemUtilGhostText = MemUtilGhostText < 10 ? MemUtilGhostText.toFixed(1) : MemUtilGhostText.toFixed(0);
-  MemoryUtilGhost.innerText = `${MemUtilGhostText}${memory_unit}`;
+  ram_unit = bisectLeft(Math.max(YAXIS_MIN, ...mem_util.ram), CONVERSION_FROM_B);
+  update_memory_trace();
+
+  let MemUtilGhostText = mem_util.ram[HISTORY_LAST] / CONVERSION_FROM_B[ram_unit];
+  MemoryUtilGhost.innerText = `${clip10(MemUtilGhostText, 1)}${ram_unit}`;
 }
 
 function update_network_io_trace() {
+  network_io_unit = bisectLeft(Math.max(
+    YAXIS_MIN, ...network_io.tx, ...network_io.rx
+  ), CONVERSION_FROM_B);
+
   NetworkIoTraces[0].y = network_io.tx.map(x => x === null ? null : x/CONVERSION_FROM_B[network_io_unit] / REFRESH_PERIOD);
   NetworkIoTraces[1].y = network_io.rx.map(x => x === null ? null : x/CONVERSION_FROM_B[network_io_unit] / REFRESH_PERIOD);
-  NetworkIoTraces[0].name = `${NET_IO_TAGS[0]}: ${NetworkIoTraces[0].y[HISTORY_LAST].toFixed(1)} ${network_io_unit}ps`;
-  NetworkIoTraces[1].name = `${NET_IO_TAGS[1]}: ${NetworkIoTraces[1].y[HISTORY_LAST].toFixed(1)} ${network_io_unit}ps`;
+
+  NetworkIoTraces[0].name = `${NET_IO_TAGS[0]}: ${(network_io.tx[HISTORY_LAST]/CONVERSION_FROM_B[tx_io_unit]).toFixed(1)} ${tx_io_unit}ps`;
+  NetworkIoTraces[1].name = `${NET_IO_TAGS[1]}: ${(network_io.rx[HISTORY_LAST]/CONVERSION_FROM_B[rx_io_unit]).toFixed(1)} ${rx_io_unit}ps`;
+
   layout_config.Network_io.y_axis_max = Math.max(
     ...NetworkIoTraces[0].y,
     ...NetworkIoTraces[1].y,
-  );
+  ) * YAXIS_MAX_MULTIPLIER;
 }
 const NetGhost = document.getElementById("net-ghost");
 function update_Neteork_io({Network_IO}) {
@@ -665,20 +716,19 @@ function update_Neteork_io({Network_IO}) {
   network_io.rx.splice(0, HISTORY_LAST, ...network_io.rx.slice(1, HISTORY_LAST));
   network_io.tx[HISTORY_LAST] = parseFloat(Network_IO.tx);
   network_io.rx[HISTORY_LAST] = parseFloat(Network_IO.rx);
-  update_network_io_trace();
-  if (layout_config.Network_io.y_axis_max < 1) {
-    network_io_unit = network_io_unit === "GB" ? "MB" : network_io_unit === "MB" ? "KB" : network_io_unit === "KB" ? "B" : "B";
-    update_network_io_trace();
-  } else if (layout_config.Network_io.y_axis_max > 1024) {
-    network_io_unit = network_io_unit === "B" ? "KB" : network_io_unit === "KB" ? "MB" : network_io_unit === "MB" ? "GB" : "GB";
-    update_network_io_trace();
-  }
-  layout_config.Network_io.y_axis_max = layout_config.Network_io.y_axis_max * YAXIS_MAX_MULTIPLIER;
 
-  const rxGhost = clip10(network_io.rx[HISTORY_LAST] / CONVERSION_FROM_B[network_io_unit], 1);
-  const txGhost = clip10(network_io.tx[HISTORY_LAST] / CONVERSION_FROM_B[network_io_unit], 1);
-  const ghostTxt = rxGhost > txGhost ? `↓ ${rxGhost}` : `↑ ${txGhost}`;
-  NetGhost.innerText = `${ghostTxt}${network_io_unit}ps`;
+  tx_io_unit = bisectLeft(Math.max(
+    YAXIS_MIN, ...network_io.tx
+  ), CONVERSION_FROM_B);
+  rx_io_unit = bisectLeft(Math.max(
+    YAXIS_MIN, ...network_io.rx
+  ), CONVERSION_FROM_B);
+  update_network_io_trace();
+
+  const txGhost = clip10(network_io.tx[HISTORY_LAST] / CONVERSION_FROM_B[tx_io_unit], 1);
+  const rxGhost = clip10(network_io.rx[HISTORY_LAST] / CONVERSION_FROM_B[rx_io_unit], 1);
+  const ghostTxt = network_io.rx[HISTORY_LAST] > network_io.tx[HISTORY_LAST] ? `↓ ${rxGhost}${rx_io_unit}` : `↑ ${txGhost}${tx_io_unit}`;
+  NetGhost.innerText = `${ghostTxt}ps`;
 }
 
 function do_blink() {
@@ -827,7 +877,7 @@ document.onkeydown = ((event) => {
       }
       ChangePlot(0, 'CPU_temp');
       break;
-  
+
     case "5":
       view = 5;
       if (trace == 'Disk_io') {
