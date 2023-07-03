@@ -74,7 +74,13 @@ body {
   text-align: center;
   padding: 0.5em;
 }
-
+.multiple-navigator-container {
+  box-sizing: border-box;
+  flex-grow: 2;
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: space-evenly;
+}
 
 .disk-io-nav {
   display: flex;

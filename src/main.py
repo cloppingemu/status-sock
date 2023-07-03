@@ -1,22 +1,18 @@
-import os
 import asyncio
-import socketio
-
+import os
 from socket import gethostname
+
+import socketio
 
 import updators
 
-
 REFRESH_PERIOD = 1  # second
-
 STATIC_FILES_DIR = f"{os.path.dirname(__file__)}/static"
-
 ROOT_VIEW = "index.html"
+
 dist_html_targets = {
   "/": f"{STATIC_FILES_DIR}/{ROOT_VIEW}",
-}
-dist_html_targets = {
-  **dist_html_targets,
+  "/*": f"{STATIC_FILES_DIR}/{ROOT_VIEW}",
   **{
     f"/{fname}": f"{STATIC_FILES_DIR}/{fname}"
     for fname in os.listdir(STATIC_FILES_DIR)
