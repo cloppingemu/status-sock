@@ -62,6 +62,10 @@ body {
   float: left;
 }
 
+.container {
+  margin-bottom: 2em;
+}
+
 .squeamish {
   margin: 0 0.5em;
 }
@@ -99,8 +103,7 @@ body {
   position: fixed;
   right: 0;
   bottom: 0;
-  padding-right: 0.25em;
-  padding-bottom: 0.25em;
+  padding: 0.25em;
   width: 100%;
   background-color: var(--bg);
   color: var(--text);
