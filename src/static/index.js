@@ -260,7 +260,8 @@ function ChangePlot(event, key) {
   }
 
   Plotly.newPlot("Plot-Area", Traces[key], layout, {
-    staticPlot: true
+    staticPlot: true,
+    responsive: true
   });
 }
 
@@ -281,6 +282,7 @@ if (window.matchMedia) {
     Plotly.redraw("Plot-Area");
   };
 }
+
 
 function SelectSensorFromMenu(sensor) {
   SelectSensor(sensor);
