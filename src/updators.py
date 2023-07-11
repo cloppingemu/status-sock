@@ -2,7 +2,7 @@ import time
 import psutil
 import asyncio
 
-from string import digits
+import string
 
 
 class CpuUtil:
@@ -59,7 +59,7 @@ class NetworkIo:
 
 
 class DiskIo:
-  __slots__ = ("last", "disks")
+  __slots__ = ("last", "disks", )
 
   def __init__(self):
     self.register()
@@ -72,8 +72,8 @@ class DiskIo:
   def filter_drives(disks):
     return {
       disk for disk in disks if disk.isalpha()
-        or disk.rstrip(digits).endswith("mmcblk")
-        or disk.rstrip(digits).endswith("nvme0n")
+        or disk.rstrip(string.digits).endswith("mmcblk")
+        or disk.rstrip(string.digits).endswith("nvme0n")
     }
 
   async def refresh(self):
