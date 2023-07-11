@@ -6,11 +6,15 @@ from string import digits
 
 
 class CpuUtil:
+  __slots__ = tuple()
+
   async def refresh(self):
     return psutil.cpu_percent(percpu=True)
 
 
-class MemUtil:
+class MemUtil():
+  __slots__ = tuple()
+
   async def total(self):
     ram = psutil.virtual_memory().total
     swap = psutil.swap_memory().total
@@ -28,6 +32,8 @@ class MemUtil:
 
 
 class CpuTemp:
+  __slots__ = tuple()
+
   async def refresh(self):
     return {
       k: [s.current for s in v]
@@ -36,27 +42,31 @@ class CpuTemp:
 
 
 class NetworkIo:
+  __slots__ = ("last", )
+
   def __init__(self):
-    self._last = psutil.net_io_counters()
+    self.last = psutil.net_io_counters()
 
   async def refresh(self):
     """
     -> TX, RX (Bps)
     """
     net_io = psutil.net_io_counters()
-    net_tx = net_io.bytes_sent - self._last.bytes_sent
-    net_rx = net_io.bytes_recv - self._last.bytes_recv
-    self._last = net_io
+    net_tx = net_io.bytes_sent - self.last.bytes_sent
+    net_rx = net_io.bytes_recv - self.last.bytes_recv
+    self.last = net_io
     return {"tx": net_tx, "rx": net_rx}
 
 
 class DiskIo:
+  __slots__ = ("last", "disks")
+
   def __init__(self):
     self.register()
 
   def register(self):
-    self._last = psutil.disk_io_counters(perdisk=True)
-    self._disks = self.filter_drives(self._last)
+    self.last = psutil.disk_io_counters(perdisk=True)
+    self.disks = self.filter_drives(self.last)
 
   @staticmethod
   def filter_drives(disks):
@@ -73,22 +83,22 @@ class DiskIo:
     io = psutil.disk_io_counters(perdisk=True)
     new_disks = self.filter_drives(io)
 
-    lost_disks = self._disks - new_disks
+    lost_disks = self.disks - new_disks
     if lost_disks:
-      self._disks = new_disks
+      self.disks = new_disks
 
     disk_io = {
       disk: {
-        "read": io[disk].read_bytes - self._last[disk].read_bytes,
-        "write": io[disk].write_bytes - self._last[disk].write_bytes,
-      } for disk in self._disks
+        "read": io[disk].read_bytes - self.last[disk].read_bytes,
+        "write": io[disk].write_bytes - self.last[disk].write_bytes,
+      } for disk in self.disks
     }
 
-    self._last = io
+    self.last = io
 
-    unseen_disks = new_disks - self._disks
+    unseen_disks = new_disks - self.disks
     if unseen_disks:
-      self._disks = new_disks
+      self.disks = new_disks
       return {
         **disk_io,
         **{k: {"read": 0, "write": 0} for k in unseen_disks}
@@ -98,11 +108,13 @@ class DiskIo:
 
 
 class UpTime:
+  __slots__ = ("boot_time", )
+
   def __init__(self):
-    self._boot_time = psutil.boot_time()
+    self.boot_time = psutil.boot_time()
 
   async def refresh(self):
-    return int(time.time() - self._boot_time)
+    return int(time.time() - self.boot_time)
 
 
 async def main():
