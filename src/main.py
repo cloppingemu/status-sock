@@ -45,8 +45,8 @@ class Task:
     return (self.cpu_util_checker.refresh(),
             self.cpu_temp_checker.refresh(),
             self.mem_checker.refresh(),
-            self.disk_io_checker.refresh(),
-            self.net_io_checker.refresh())
+            self.net_io_checker.refresh(),
+            self.disk_io_checker.refresh())
 
   async def repeat(self):
     self.stopped = False
