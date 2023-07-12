@@ -99,7 +99,7 @@ class DiskIo:
     unseen_disks = new_disks - self.disks
     if unseen_disks:
       self.disks = new_disks
-      return {
+      disk_io = {
         **disk_io,
         **{k: {"read": 0, "write": 0} for k in unseen_disks}
       }
