@@ -346,12 +346,12 @@ function DiskSelect(disk) {
     update_disk_io_trace();
 
     layout_config.Disk_io.y_title = `Disk IO (${disk_io_unit}ps)`;
-
-    const readText = `${DISK_IO_TAGS[0]}: ${clip10(disk_io[disk].read[HISTORY_LAST] / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
-    const writeText = `${DISK_IO_TAGS[1]}: ${clip10(disk_io[disk].write[HISTORY_LAST] / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
-    const ghostTxt = disk_io[disk].read[HISTORY_LAST] == 0 && disk_io[disk].write[HISTORY_LAST] == 0 ? `Idle` : disk_io[disk].read[HISTORY_LAST] > disk_io[disk].write[HISTORY_LAST] ? readText : writeText;
-    DiskIoGhost.innerText = ghostTxt;
   }
+
+  const readText = `${DISK_IO_TAGS[0]}: ${clip10(disk_io[disk].read[HISTORY_LAST] / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
+  const writeText = `${DISK_IO_TAGS[1]}: ${clip10(disk_io[disk].write[HISTORY_LAST] / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
+  const ghostTxt = disk_io[disk].read[HISTORY_LAST] == 0 && disk_io[disk].write[HISTORY_LAST] == 0 ? `Idle` : disk_io[disk].read[HISTORY_LAST] > disk_io[disk].write[HISTORY_LAST] ? readText : writeText;
+  DiskIoGhost.innerText = ghostTxt;
 }
 
 
