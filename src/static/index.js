@@ -330,23 +330,20 @@ function DiskSelectFromMenu(disk) {
 function DiskSelect(disk) {
   disk_to_show = disk;
 
-  if (trace == "Disk_io") {
+  disk_io_unit = bisectLeft(Math.max(
+    YAXIS_MIN,
+    ...disk_io[disk_to_show].read,
+    ...disk_io[disk_to_show].write
+  ), CONVERSION_FROM_B);
+  read_io_unit = bisectLeft(Math.max(
+    YAXIS_MIN, ...disk_io[disk_to_show].read
+  ), CONVERSION_FROM_B);
+  write_io_unit = bisectLeft(Math.max(
+    YAXIS_MIN, ...disk_io[disk_to_show].write
+  ), CONVERSION_FROM_B);
 
-    disk_io_unit = bisectLeft(Math.max(
-      YAXIS_MIN,
-      ...disk_io[disk_to_show].read,
-      ...disk_io[disk_to_show].write
-    ), CONVERSION_FROM_B);
-    read_io_unit = bisectLeft(Math.max(
-      YAXIS_MIN, ...disk_io[disk_to_show].read
-    ), CONVERSION_FROM_B);
-    write_io_unit = bisectLeft(Math.max(
-      YAXIS_MIN, ...disk_io[disk_to_show].write
-    ), CONVERSION_FROM_B);  
-    update_disk_io_trace();
-
-    layout_config.Disk_io.y_title = `Disk IO (${disk_io_unit}ps)`;
-  }
+  update_disk_io_trace();
+  layout_config.Disk_io.y_title = `Disk IO (${disk_io_unit}ps)`;
 
   const readText = `${DISK_IO_TAGS[0]}: ${clip10(disk_io[disk].read[HISTORY_LAST] / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
   const writeText = `${DISK_IO_TAGS[1]}: ${clip10(disk_io[disk].write[HISTORY_LAST] / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
@@ -487,29 +484,29 @@ sio.on("status_init", (init) => {
     rx: Array(HISTORY_SIZE).fill(null),
   };
   NetworkIoTraces = [
-   {
-     x: time,
-     y: Array(HISTORY_SIZE).fill(null),
-     name: `${NET_IO_TAGS[0]}`,
-     line: {
+    {
+      x: time,
+      y: Array(HISTORY_SIZE).fill(null),
+      name: `${NET_IO_TAGS[0]}`,
+      line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
         width: LINE_WIDTH_THICK
-     },
-     showlegend: true,
-   },
-   {
-     x: time,
-     y: Array(HISTORY_SIZE).fill(null),
-     name: `${NET_IO_TAGS[1]}`,
-     line: {
+      },
+      showlegend: true,
+    },
+    {
+      x: time,
+      y: Array(HISTORY_SIZE).fill(null),
+      name: `${NET_IO_TAGS[1]}`,
+      line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
         width: LINE_WIDTH_THICK
-     },
-     showlegend: true,
-   },
- ];
+      },
+      showlegend: true,
+    },
+  ];
 
   Traces = {
     CPU_util: CpuUtilTraces,
