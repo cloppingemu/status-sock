@@ -2,7 +2,7 @@ let NUM_CPU_PACKAGES = 2;
 let NUM_CPU_CORES = 1;
 let MAX_RAM_SIZE = 1;
 
-const LINE_SHAPE = 'spline';   // 'linear';
+const LINE_SHAPE = "spline";   // "linear";
 const LINE_SMOOTHING = 1.0;    // Has an effect only if `shape` is set to "spline". Sets the amount of smoothing.
                                // "0" corresponds to no smoothing (equivalent to a "linear" shape).
 const LINE_WIDTH_THIN = 1;
@@ -41,13 +41,13 @@ function bisectRight(val, maps) {
 
 function bisectLeft(val, maps) {
   /*
-    bisectLeft(0, {a:1, b:3, c:5}) -> 'a'
-    bisectLeft(1, {a:1, b:3, c:5}) -> 'a'
-    bisectLeft(2, {a:1, b:3, c:5}) -> 'a'
-    bisectLeft(3, {a:1, b:3, c:5}) -> 'a'
-    bisectLeft(4, {a:1, b:3, c:5}) -> 'b'
-    bisectLeft(5, {a:1, b:3, c:5}) -> 'b'
-    bisectLeft(6, {a:1, b:3, c:5}) -> 'c'
+    bisectLeft(0, {a:1, b:3, c:5}) -> "a"
+    bisectLeft(1, {a:1, b:3, c:5}) -> "a"
+    bisectLeft(2, {a:1, b:3, c:5}) -> "a"
+    bisectLeft(3, {a:1, b:3, c:5}) -> "a"
+    bisectLeft(4, {a:1, b:3, c:5}) -> "b"
+    bisectLeft(5, {a:1, b:3, c:5}) -> "b"
+    bisectLeft(6, {a:1, b:3, c:5}) -> "c"
   */
   const labels = Object.keys(maps).sort((a, b) => maps[a] - maps[b])
   const eligible = labels.filter(l => maps[l] < val);
@@ -69,16 +69,16 @@ let HISTORY_SIZE = HISTORY_TIME / REFRESH_PERIOD;
 let HISTORY_LAST = HISTORY_SIZE - 1;
 
 // const PLOTLY_COLORS = [
-//   '#1f77b4',  // muted blue
-//   '#ff7f0e',  // safety orange
-//   '#2ca02c',  // cooked asparagus green
-//   '#d62728',  // brick red
-//   '#9467bd',  // muted purple
-//   '#8c564b',  // chestnut brown
-//   '#e377c2',  // raspberry yogurt pink
-//   '#7f7f7f',  // middle gray
-//   '#bcbd22',  // curry yellow-green
-//   '#17becf'   // blue-teal
+//   "#1f77b4",  // muted blue
+//   "#ff7f0e",  // safety orange
+//   "#2ca02c",  // cooked asparagus green
+//   "#d62728",  // brick red
+//   "#9467bd",  // muted purple
+//   "#8c564b",  // chestnut brown
+//   "#e377c2",  // raspberry yogurt pink
+//   "#7f7f7f",  // middle gray
+//   "#bcbd22",  // curry yellow-green
+//   "#17becf"   // blue-teal
 // ]
 
 
@@ -181,7 +181,7 @@ const layout = {
       size: 25
     },
   },
-  plot_bgcolor: '#fff',
+  plot_bgcolor: "#fff",
   paper_bgcolor: "#fff",
 
   yaxis: {
@@ -296,8 +296,8 @@ function SelectSensor(sensor) {
 
   Traces.CPU_temp = [...Array.from(Array(Object.keys(temp_sensors[sensor_to_show][HISTORY_LAST]).length).keys(), i => {
     const NUM_TEMP_SENSORS = temp_sensors[sensor_to_show][HISTORY_LAST].length;
-    let nameMax = '';
-    let nameAv = '';
+    let nameMax = "";
+    let nameAv = "";
     if (NUM_TEMP_SENSORS > 2) {
       nameMax = `${SENSOR_TAGS[0]}: ${Math.ceil(Math.max(...temp_sensors[sensor_to_show][HISTORY_LAST]))}° C`;
       nameAv = `${SENSOR_TAGS[1]}: ${Math.round(temp_sensors[sensor_to_show][HISTORY_LAST].reduce((a,b) => a+b) / NUM_TEMP_SENSORS)}° C`;
@@ -460,7 +460,7 @@ sio.on("status_init", (init) => {
     {
       x: time,
       y: Array(HISTORY_SIZE).fill(null),
-      name: `Read`,
+      name: "Read",
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
@@ -470,7 +470,7 @@ sio.on("status_init", (init) => {
     {
       x: time,
       y: Array(HISTORY_SIZE).fill(null),
-      name: `Write`,
+      name: "Write",
       line: {
         shape: LINE_SHAPE,
         smoothing: LINE_SMOOTHING,
@@ -591,7 +591,8 @@ function update_Disk_io({Disk_IO}) {
   if (missing_disks.length) {
     for (let disk of missing_disks) {
       delete disk_io[disk];
-      document.getElementById("disk-selector").children[Array.from(document.getElementById("disk-selector").children).map(o => o.value).indexOf(disk)].remove();
+      const current_disks = document.getElementById("disk-selector").children;
+      current_disks[Array.from(current_disks).map(o => o.value).indexOf(disk)].remove();
       all_disks.splice(all_disks.indexOf(disk), 1);
       if (disk_to_show == disk) {
         disk_to_show = all_disks[0];
@@ -617,7 +618,7 @@ function update_Disk_io({Disk_IO}) {
 
   const readText = `${DISK_IO_TAGS[0]}: ${clip10(Disk_IO[disk_to_show].read / CONVERSION_FROM_B[read_io_unit], 1)}${read_io_unit}ps`;
   const writeText = `${DISK_IO_TAGS[1]}: ${clip10(Disk_IO[disk_to_show].write / CONVERSION_FROM_B[write_io_unit], 1)}${write_io_unit}ps`;
-  const ghostTxt = Disk_IO[disk_to_show].read == 0 && Disk_IO[disk_to_show].write == 0 ? `Idle` : Disk_IO[disk_to_show].read > Disk_IO[disk_to_show].write ? readText : writeText;
+  const ghostTxt = Disk_IO[disk_to_show].read == 0 && Disk_IO[disk_to_show].write == 0 ? "Idle" : Disk_IO[disk_to_show].read > Disk_IO[disk_to_show].write ? readText : writeText;
   DiskIoGhost.innerText = ghostTxt;
 }
 
@@ -770,7 +771,7 @@ function formatTime(uptime) {
 
   uptime_factorised.s = cum_uptime;
 
-  time_units = ['y', 'w', 'd', 'h', 'm', 's'];
+  time_units = ["y", "w", "d", "h", "m", "s"];
   const uptime_factors_to_show = [": "]
 
   for (unit of time_units) {
@@ -833,79 +834,113 @@ sio.on("status_update", (status) => {
 
 let view = 1;
 const views = [
-  'CPU_util',
-  'Memory',
-  'Network_io',
-  'CPU_temp',
-  'Disk_io'
+  "CPU_util",
+  "Memory",
+  "Network_io",
+  "CPU_temp",
+  "Disk_io"
 ]
 
 document.onkeydown = ((event) => {
   switch (event.key) {
     case "1":
       view = 1;
-      ChangePlot(0, 'CPU_util');
+      ChangePlot(0, "CPU_util");
       break;
 
     case "2":
       view = 2;
-      ChangePlot(0, 'Memory');
+      ChangePlot(0, "Memory");
       break;
 
     case "3":
       view = 3;
-      ChangePlot(0, 'Network_io');
+      ChangePlot(0, "Network_io");
       break;
 
     case "4":
       view = 4;
-      if (trace == 'CPU_temp') {
-        sensor_to_show = Object.keys(temp_sensors).sort()[(Object.keys(temp_sensors).sort().indexOf(sensor_to_show) + 1) % Object.keys(temp_sensors).length];
+      if (trace == "CPU_temp") {
+        sensor_to_show = Object.keys(temp_sensors)[(Object.keys(temp_sensors).indexOf(sensor_to_show) + 1) % Object.keys(temp_sensors).length];
         SelectSensor(sensor_to_show);
         document.getElementById("sensor-selector").value = sensor_to_show;
       }
-      ChangePlot(0, 'CPU_temp');
+      ChangePlot(0, "CPU_temp");
       break;
 
     case "$":
       view = 4;
-      if (trace == 'CPU_temp') {
-        sensor_to_show = Object.keys(temp_sensors).sort()[(Object.keys(temp_sensors).sort().indexOf(sensor_to_show) - 1 + Object.keys(temp_sensors).length) % Object.keys(temp_sensors).length];
+      if (trace == "CPU_temp") {
+        sensor_to_show = Object.keys(temp_sensors)[(Object.keys(temp_sensors).indexOf(sensor_to_show) - 1 + Object.keys(temp_sensors).length) % Object.keys(temp_sensors).length];
         SelectSensor(sensor_to_show);
         document.getElementById("sensor-selector").value = sensor_to_show;
       }
-      ChangePlot(0, 'CPU_temp');
+      ChangePlot(0, "CPU_temp");
       break;
 
     case "5":
       view = 5;
-      if (trace == 'Disk_io') {
+      if (trace == "Disk_io") {
         disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + 1) % all_disks.length];
         DiskSelect(disk_to_show);
         document.getElementById("disk-selector").value = disk_to_show;
       }
-      ChangePlot(0, 'Disk_io');
+      ChangePlot(0, "Disk_io");
       break;
 
     case "%":
       view = 5;
-      if (trace == 'Disk_io') {
+      if (trace == "Disk_io") {
         disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + all_disks.length - 1) % all_disks.length];
         DiskSelect(disk_to_show);
         document.getElementById("disk-selector").value = disk_to_show;
       }
-      ChangePlot(0, 'Disk_io');
+      ChangePlot(0, "Disk_io");
       break;
 
+    case "ArrowRight":
     case "`":
       view = (view % views.length) + 1;
       ChangePlot(0, views[view-1]);
       break;
 
+    case "ArrowLeft":
     case "~":
       view = ((view - 1) % views.length);
       view = view ? view : views.length;
       ChangePlot(0, views[(view-1)]);
       break;
-  }
+
+    case "ArrowUp":
+      if (trace == "Disk_io") {
+        disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + all_disks.length - 1) % all_disks.length];
+        DiskSelect(disk_to_show);
+        document.getElementById("disk-selector").value = disk_to_show;
+        ChangePlot(0, "Disk_io");
+      } else if (trace == "CPU_temp") {
+        sensor_to_show = Object.keys(temp_sensors)[(Object.keys(temp_sensors).indexOf(sensor_to_show) - 1 + Object.keys(temp_sensors).length) % Object.keys(temp_sensors).length];
+        SelectSensor(sensor_to_show);
+        document.getElementById("sensor-selector").value = sensor_to_show;
+        ChangePlot(0, "CPU_temp");
+      }
+      break;
+
+    case "ArrowDown":
+      if (trace == "Disk_io") {
+        disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + 1) % all_disks.length];
+        DiskSelect(disk_to_show);
+        document.getElementById("disk-selector").value = disk_to_show;
+        ChangePlot(0, "Disk_io");
+      } else if (trace == "CPU_temp") {
+        sensor_to_show = Object.keys(temp_sensors)[(Object.keys(temp_sensors).indexOf(sensor_to_show) + 1) % Object.keys(temp_sensors).length];
+        SelectSensor(sensor_to_show);
+        document.getElementById("sensor-selector").value = sensor_to_show;
+        ChangePlot(0, "CPU_temp");
+      }
+      break;
+
+    default:
+      console.log({key: event.key})
+
+  } 
 });
