@@ -942,5 +942,5 @@ document.onkeydown = ((event) => {
     default:
       console.log({key: event.key})
 
-  } 
+  }
 });

@@ -3,6 +3,7 @@ import json
 import os
 import psutil
 import string
+import time
 
 from meross_iot.controller.mixins.electricity import ElectricityMixin
 from meross_iot.http_api import MerossHttpClient
@@ -128,6 +129,8 @@ with open(os.path.join(os.path.dirname(__file__), "creds.json")) as f:
   MEROSS_PASSWORD = creds["MEROSS_PASSWORD"]
 
 class Meross:
+  __slots__ = ("manager", "http_api_client", "devs")
+
   def __init__(self):
     pass
 
@@ -137,6 +140,7 @@ class Meross:
       email=MEROSS_USERNAME,
       password=MEROSS_PASSWORD
     )
+
     self.manager = MerossManager(http_client=self.http_api_client)
     await self.manager.async_init()
     await self.manager.async_device_discovery()
@@ -153,31 +157,29 @@ class Meross:
     instant = await asyncio.gather(*[dev.async_get_instant_metrics() for dev in self.devs])
     return {dev.name: inst.power for dev, inst in zip(self.devs, instant)}
 
-  async def exit(self):
-    print("cleanup crew")
+  async def cleanup(self):
+    print("Meross cleanup crew")
     self.manager.close()
     await self.http_api_client.async_logout()
 
 
 async def meross():
-  import time
-
   try:
-    t0 = time.time()
+    t0 = time.perf_counter()
     meross = Meross()
     await meross.setup()
 
     for i in range(300):
       t1 = t0
-      t0 = time.time()
+      t0 = time.perf_counter()
       v, _ = await asyncio.gather(
         meross.refresh(),
         asyncio.sleep(1)
       )
-      print(f"{i}\t{t0 - t1:0.1f}s:\tPower draw (W): {v}")
+      print(f"{i}\t{t0 - t1:0.5f}s:\tPower draw (W): {v}")
 
   finally:
-    await meross.exit()
+    await meross.cleanup()
 
 
 async def main():
