@@ -1,9 +1,12 @@
-import time
-import psutil
 import asyncio
-
+import psutil
 import string
+import time
+import weakref
 
+from meross_iot.controller.mixins.electricity import ElectricityMixin
+from meross_iot.http_api import MerossHttpClient
+from meross_iot.manager import MerossManager
 
 class CpuUtil:
   __slots__ = tuple()
@@ -117,6 +120,33 @@ class UpTime:
     return int(time.time() - self.boot_time)
 
 
+class Meross:
+  def __init__(self):
+    pass
+
+  @classmethod
+  async def init(cls):
+    self = cls()
+    self.http_api_client = await MerossHttpClient.async_from_user_password(api_base_url="https://iotx-ap.meross.com", email="writetosoni@outlook.com", password="ciV2MR!UM$*6Vj%D8a")
+    self.manager = MerossManager(http_client=self.http_api_client)
+    await self.manager.async_init()
+
+    self.devs = self.manager.find_devices(device_class=ElectricityMixin)
+
+    if len(self.devs) < 1:
+      await self.exit()
+      raise ValueError("No electricity-capable device found")
+
+    asyncio.gather(*[dev.async_update() for dev in self.devs()])
+
+  async def refresh(self):
+    instant_consumption = await asyncio.gather(*[dev.async_get_instant_metrics() for dev in self.devs])
+    print(f"Current consumption data: {instant_consumption}")
+
+  async def exit(self):
+    self.manager.close()
+    await self.http_api_client.async_logout()
+
 async def main():
   mem_util = MemUtil()
   cpu_util = CpuUtil()
@@ -146,5 +176,19 @@ async def main():
     print("\t".join(map(str, v)))
 
 
+
+async def meross():
+  meross = await Meross.init()
+
+  for _ in range(5):
+    *v, _ = await asyncio.gather(
+      meross.refresh(),
+      asyncio.sleep(5)
+    )
+    print(v)
+
+  await meross.exit()
+
+
 if __name__ == "__main__":
-  asyncio.run(main())
+  asyncio.run(meross())
