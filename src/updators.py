@@ -3,8 +3,6 @@ import json
 import os
 import psutil
 import string
-import time
-from typing import List
 
 from meross_iot.controller.mixins.electricity import ElectricityMixin
 from meross_iot.http_api import MerossHttpClient
@@ -133,31 +131,27 @@ class Meross:
   def __init__(self):
     pass
 
-  @classmethod
-  async def init(cls):
-    instance = cls()
-    instance.http_api_client = await MerossHttpClient.async_from_user_password(
+  async def setup(self):
+    self.http_api_client = await MerossHttpClient.async_from_user_password(
       api_base_url="https://iotx-ap.meross.com",
       email=MEROSS_USERNAME,
       password=MEROSS_PASSWORD
     )
-    instance.manager = MerossManager(http_client=instance.http_api_client)
-    await instance.manager.async_init()
+    self.manager = MerossManager(http_client=self.http_api_client)
+    await self.manager.async_init()
+    await self.manager.async_device_discovery()
 
-    await instance.manager.async_device_discovery()
-    instance.devs: List[ElectricityMixin] = instance.manager.find_devices(device_class=ElectricityMixin)
-
-    instance.manager._default_transport_mode = TransportMode.LAN_HTTP_FIRST
-    if len(instance.devs) < 1:
-      await instance.exit()
+    self.devs = self.manager.find_devices(device_class=ElectricityMixin)
+    if len(self.devs) < 1:
+      await self.exit()
       raise ValueError("No electricity-capable device found")
+    self.manager.default_transport_mode = TransportMode.LAN_HTTP_FIRST_ONLY_GET
 
-    await asyncio.gather(*[dev.async_update() for dev in instance.devs])
-    return instance
+    await asyncio.gather(*[dev.async_update() for dev in self.devs])
 
   async def refresh(self):
-    instant_consumption = await asyncio.gather(*[dev.async_get_instant_metrics() for dev in self.devs])
-    return {dev.name: instance.power for dev, instance in zip(self.devs, instant_consumption)}
+    instant = await asyncio.gather(*[dev.async_get_instant_metrics() for dev in self.devs])
+    return {dev.name: inst.power for dev, inst in zip(self.devs, instant)}
 
   async def exit(self):
     print("cleanup crew")
@@ -165,6 +159,25 @@ class Meross:
     await self.http_api_client.async_logout()
 
 
+async def meross():
+  import time
+
+  try:
+    t0 = time.time()
+    meross = Meross()
+    await meross.setup()
+
+    for i in range(300):
+      t1 = t0
+      t0 = time.time()
+      v, _ = await asyncio.gather(
+        meross.refresh(),
+        asyncio.sleep(1)
+      )
+      print(f"{i}\t{t0 - t1:0.1f}s:\tPower draw (W): {v}")
+
+  finally:
+    await meross.exit()
 
 
 async def main():
@@ -196,26 +209,6 @@ async def main():
     print("\t".join(map(str, v)))
 
 
-
-async def meross():
-  import time
-
-  try:
-    t0 = time.time()
-    meross = await Meross.init()
-
-    for _ in range(1):
-      t1 = t0
-      t0 = time.time()
-      v, _ = await asyncio.gather(
-        meross.refresh(),
-        asyncio.sleep(3)
-      )
-      print(f"{t0 - t1}s:\tPower draw (W): {v}")
-
-  finally:
-    await meross.exit()
-
-
 if __name__ == "__main__":
   asyncio.run(meross())
+  asyncio.run(main())
