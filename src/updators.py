@@ -11,12 +11,6 @@ from meross_iot.manager import MerossManager, TransportMode
 
 
 class Checkers:
-  async def __aenter__(self):
-    return self
-
-  async def __aexit__(self, *_):
-    pass
-
   async def current(self):
     return self._current
 
@@ -184,6 +178,9 @@ class Meross(Checkers):
 
     await asyncio.gather(*[dev.async_update() for dev in self.devs])
 
+    instant = await asyncio.gather(*[dev.async_get_instant_metrics() for dev in self.devs])
+    self._current = {dev.name: inst.power for dev, inst in zip(self.devs, instant)}
+
   async def refresh(self):
     instant = await asyncio.gather(*[dev.async_get_instant_metrics() for dev in self.devs])
     self._current = {dev.name: inst.power for dev, inst in zip(self.devs, instant)}
@@ -198,7 +195,7 @@ class Meross(Checkers):
 class Task:
   __slots__ = ("go", "stopped", "sio", "ready",
                "up_time_checker", "cpu_util_checker",
-               "cpu_temp_checker", "mem_checker",
+               "cpu_temp_checker", "mem_util_checker",
                "disk_io_checker", "net_io_checker",
                "meross_checker")
 
@@ -211,7 +208,7 @@ class Task:
 
     self.cpu_util_checker = CpuUtil()
     self.cpu_temp_checker = CpuTemp()
-    self.mem_checker = MemUtil()
+    self.mem_util_checker = MemUtil()
     self.disk_io_checker = DiskIo()
     self.net_io_checker = NetworkIo()
     self.meross_checker = Meross()
@@ -232,56 +229,53 @@ class Task:
     return await asyncio.gather(
       self.cpu_util_checker.current(),
       self.cpu_temp_checker.current(),
-      self.mem_checker.current(),
+      self.mem_util_checker.current(),
       self.net_io_checker.current(),
       self.disk_io_checker.current(),
+      self.meross_checker.current(),
     )
 
   @staticmethod
   def _refresh(*args):
     return [resource.refresh() for resource in args]
 
-  async def refresh(self):
-    async with (
-      self.cpu_util_checker as cpu_util,
-      self.cpu_temp_checker as cpu_temp,
-      self.mem_checker as mem_util,
-      self.disk_io_checker as disk_io,
-      self.net_io_checker as net_io,
-    ):
-      return await asyncio.gather(*self._refresh(cpu_util, cpu_temp, mem_util, disk_io, net_io))
-
   async def repeat(self, period):
     self.stopped = False
 
-    async with (
-      self.cpu_util_checker as cpu_util,
-      self.cpu_temp_checker as cpu_temp,
-      self.mem_checker as mem_util,
-      self.disk_io_checker as disk_io,
-      self.net_io_checker as net_io,
-      self.meross_checker as meross,
-    ):
+    cpu_util_v, cpu_temp_v, mem_util_v, disk_io_v, net_io_v, meross_v, _ = await asyncio.gather(
+      *self._refresh(
+        self.cpu_util_checker,
+        self.cpu_temp_checker,
+        self.mem_util_checker,
+        self.disk_io_checker,
+        self.net_io_checker,
+        self.meross_checker,
+      ),
+      self.sio.sleep(period),
+    )
 
-      cpu_util_v, cpu_temp_v, mem_util_v, disk_io_v, net_io_v, meross_v, _ = await asyncio.gather(
-        *self._refresh(cpu_util, cpu_temp, mem_util, disk_io, net_io, meross),
+    while self.go:
+      (cpu_util_v, cpu_temp_v, mem_util_v, disk_io_v, net_io_v, meross_v, *_) = await asyncio.gather(
+        *self._refresh(
+          self.cpu_util_checker,
+          self.cpu_temp_checker,
+          self.mem_util_checker,
+          self.disk_io_checker,
+          self.net_io_checker,
+          self.meross_checker,
+        ),
+
         self.sio.sleep(period),
+
+        self.sio.emit("status_update", {
+          "CPU_Util": cpu_util_v,
+          "CPU_Temp": cpu_temp_v,
+          "Memory": mem_util_v,
+          "Disk_IO": disk_io_v,
+          "Network_IO": net_io_v,
+          "Meross_Power": meross_v,
+        }),
       )
-
-      while self.go:
-        (cpu_util_v, cpu_temp_v, mem_util_v, disk_io_v, net_io_v, meross_v, *_) = await asyncio.gather(
-          *self._refresh(cpu_util, cpu_temp, mem_util, disk_io, net_io, meross),
-          self.sio.sleep(period),
-
-          self.sio.emit("status_update", {
-            "CPU_Util": cpu_util_v,
-            "CPU_Temp": cpu_temp_v,
-            "Memory": mem_util_v,
-            "Disk_IO": disk_io_v,
-            "Network_IO": net_io_v,
-            "Meross_Power": meross_v,
-          }),
-        )
 
     self.stopped = True
     print("Exiting background task")

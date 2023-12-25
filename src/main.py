@@ -39,7 +39,7 @@ async def on_connect(sid, *_):
   num_clients += 1
   print(sid, "connected; Active:", num_clients)
 
-  up_time, (cpu_util, cpu_temp, mem_util, net_io, disk_io), *_ = await asyncio.gather(
+  up_time, (cpu_util, cpu_temp, mem_util, net_io, disk_io, meross_power), *_ = await asyncio.gather(
     task.up_time(),
     task.current(),
     sio.emit("client_count", {
@@ -54,6 +54,7 @@ async def on_connect(sid, *_):
     "Memory": mem_util,
     "Network_IO": net_io,
     "Disk_IO": disk_io,
+    "Meross_Power": meross_power,
     "Refresh_Period": REFRESH_PERIOD,
     "Hostname": gethostname(),
   }, to=sid)
