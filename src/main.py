@@ -20,16 +20,21 @@ dist_html_targets = {
   },
 }
 
-sio = socketio.AsyncServer(async_mode="asgi")
-app = socketio.ASGIApp(sio, static_files=dist_html_targets)
+task = updators.Task()
 
-task = updators.Task(sio, REFRESH_PERIOD)
+sio = socketio.AsyncServer(async_mode="asgi")
+app = socketio.ASGIApp(sio, static_files=dist_html_targets, on_shutdown=task.cleanup)
+
 num_clients = 0
 
+task_setup = asyncio.create_task(task.setup(sio))
 
 @sio.on("connect")
 async def on_connect(sid, *_):
-  global num_clients, task
+  global num_clients, task, task_setup
+
+  if not task_setup.done():
+    await task_setup
 
   num_clients += 1
   print(sid, "connected; Active:", num_clients)
@@ -56,7 +61,7 @@ async def on_connect(sid, *_):
   if not task.go:
     task.go = True
     if task.stopped:
-      sio.start_background_task(task.repeat)
+      sio.start_background_task(task.repeat, REFRESH_PERIOD)
 
 
 @sio.on("disconnect")

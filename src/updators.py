@@ -116,9 +116,6 @@ class DiskIo(Checkers):
     }
 
   async def refresh(self):
-    """
-    -> disk: {read: , write: } (Bps)
-    """
     io = psutil.disk_io_counters(perdisk=True)
     new_disks = self.filter_drives(io)
 
@@ -197,26 +194,18 @@ class Meross(Checkers):
     self.manager.close()
     await self.http_api_client.async_logout()
 
-  async def __aenter__(self):
-    await self.setup()
-    return self
-
-  async def __aexit__(self, *_):
-    await self.cleanup()
-
 
 class Task:
-  __slots__ = ("go", "stopped", "refresh_period", "sio",
+  __slots__ = ("go", "stopped", "sio", "ready",
                "up_time_checker", "cpu_util_checker",
                "cpu_temp_checker", "mem_checker",
                "disk_io_checker", "net_io_checker",
                "meross_checker")
 
-  def __init__(self, sio, refresh_period):
+  def __init__(self):
     self.go = False
-    self.sio = sio
     self.stopped = True
-    self.refresh_period = refresh_period
+    self.ready = False
 
     self.up_time_checker = UpTime()
 
@@ -227,6 +216,15 @@ class Task:
     self.net_io_checker = NetworkIo()
     self.meross_checker = Meross()
 
+  async def setup(self, sio):
+    await self.meross_checker.setup()
+    self.ready = True
+    self.sio = sio
+
+  async def cleanup(self):
+    if self.ready:
+      return await self.meross_checker.cleanup()
+
   async def up_time(self):
     return await self.up_time_checker.refresh()
 
@@ -235,8 +233,8 @@ class Task:
       self.cpu_util_checker.current(),
       self.cpu_temp_checker.current(),
       self.mem_checker.current(),
-      self.disk_io_checker.current(),
       self.net_io_checker.current(),
+      self.disk_io_checker.current(),
     )
 
   @staticmethod
@@ -253,7 +251,7 @@ class Task:
     ):
       return await asyncio.gather(*self._refresh(cpu_util, cpu_temp, mem_util, disk_io, net_io))
 
-  async def repeat(self):
+  async def repeat(self, period):
     self.stopped = False
 
     async with (
@@ -267,13 +265,13 @@ class Task:
 
       cpu_util_v, cpu_temp_v, mem_util_v, disk_io_v, net_io_v, meross_v, _ = await asyncio.gather(
         *self._refresh(cpu_util, cpu_temp, mem_util, disk_io, net_io, meross),
-        self.sio.sleep(self.refresh_period),
+        self.sio.sleep(period),
       )
 
       while self.go:
         (cpu_util_v, cpu_temp_v, mem_util_v, disk_io_v, net_io_v, meross_v, *_) = await asyncio.gather(
           *self._refresh(cpu_util, cpu_temp, mem_util, disk_io, net_io, meross),
-          self.sio.sleep(self.refresh_period),
+          self.sio.sleep(period),
 
           self.sio.emit("status_update", {
             "CPU_Util": cpu_util_v,
@@ -302,13 +300,20 @@ class SioStub:
 
 
 async def main():
-  checker = Task(SioStub(), 1)
+  sio = SioStub()
+  checker = Task()
+  await checker.setup(sio)
   checker.go = True
-  task = asyncio.create_task(checker.repeat())
-  _, pending = await asyncio.wait({task}, timeout=0)
-  await asyncio.sleep(30)
+
+  task = asyncio.create_task(checker.repeat(1))
+  (_, pending), _ = await asyncio.gather(
+    asyncio.wait({task}, timeout=0),
+    asyncio.sleep(30)
+  )
   checker.go = False
   await asyncio.gather(*pending)
+
+  await checker.cleanup()
 
 
 if __name__ == "__main__":

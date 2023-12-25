@@ -787,7 +787,7 @@ function formatTime(uptime) {
 
 sio.on("status_update", (status) => {
   status_count = false;
-  console.log(status);
+  console.log(status.Meross_Power);
   do_blink();
 
   isDarkMode = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -939,9 +939,5 @@ document.onkeydown = ((event) => {
         ChangePlot(0, "CPU_temp");
       }
       break;
-
-    default:
-      console.log({key: event.key})
-
   }
 });
