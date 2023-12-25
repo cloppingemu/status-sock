@@ -28,6 +28,13 @@
     <div id="Plot-Area"></div>
     <div id="navigator" class="navigator">
       <span class="navigator-targets cpu-util" onclick="ChangePlot(event, 'CPU_util')"><span class="squeamish">CPU Util</span><br /><span class="squeamish ghost" id="cpu_util-ghost">-%</span></span>
+      <span class="navigator-targets meross-power" onclick="ChangePlot(event, 'Meross_power')">
+        <span class="disk-io-nav">
+          <span class="squeamish">Power</span>
+          <select class="squeamish" name="meross-selector" id="meross-selector" onchange="MerossPowerSelectFromMenu(this.value)"></select>
+        </span>
+        <span class="squeamish ghost" id="meross-power-ghost">0W</span>
+      </span>
       <span class="navigator-targets memory" onclick="ChangePlot(event, 'Memory')"><span class="squeamish">Memory</span><br /><span class="squeamish ghost" id="mem-ghost">0b</span></span>
       <span class="navigator-targets network" onclick="ChangePlot(event, 'Network_io')"><span class="squeamish">Net IO</span><br /><span class="squeamish ghost" id="net-ghost">0bps</span></span>
       <span class="multiple-navigator-container">
@@ -41,13 +48,6 @@
             <select class="squeamish" name="disk-selector" id="disk-selector" onchange="DiskSelectFromMenu(this.value)"></select>
           </span>
           <span class="squeamish ghost" id="disk-ghost">0bps</span>
-        </span>
-        <span class="navigator-targets meross-power" onclick="ChangePlot(event, 'Meross_power')">
-          <span class="disk-io-nav">
-            <span class="squeamish">Power</span>
-            <select class="squeamish" name="meross-selector" id="meross-selector" onchange="MerossPowerSelectFromMenu(this.value)"></select>
-          </span>
-          <span class="squeamish ghost" id="meross-power-ghost">0W</span>
         </span>
       </span>
     </div>

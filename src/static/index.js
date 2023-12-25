@@ -873,27 +873,27 @@ sio.on("status_update", (status) => {
 
     switch (trace) {
       case views[0]:
-        layout.yaxis.title = layout_config.CPU_util.y_title;
+        layout.yaxis.title = layout_config[trace].y_title;
         break;
 
       case views[1]:
-        layout.yaxis.title = `Util (${memory_unit})`;
+        layout.yaxis.title = layout_config[trace].y_title;
         break;
 
       case views[2]:
-        layout.yaxis.title = `Net IO (${network_io_unit}ps)`;
+        layout.yaxis.title = `Util (${memory_unit})`;
         break;
 
       case views[3]:
-        layout.yaxis.title = layout_config.CPU_temp.y_title;
+        layout.yaxis.title = `Net IO (${network_io_unit}ps)`;
         break;
 
       case views[4]:
-        layout.yaxis.title = `Disk IO (${disk_io_unit}ps)`;
+        layout.yaxis.title = layout_config[trace].y_title;
         break;
 
       case views[5]:
-        layout.yaxis.title = 'Power (W)';
+        layout.yaxis.title = `Disk IO (${disk_io_unit}ps)`;
         break;
       }
 
@@ -911,89 +911,89 @@ sio.on("status_update", (status) => {
 
 let view = 1;
 const views = [
-  "CPU_util",
-  "Memory",
-  "Network_io",
-  "CPU_temp",
-  "Disk_io",
-  "Meross_power",
+  /* 0 */ "CPU_util",
+  /* 1 */ "Meross_power",
+  /* 2 */ "Memory",
+  /* 3 */ "Network_io",
+  /* 4 */ "CPU_temp",
+  /* 5 */ "Disk_io",
 ]
 
 document.onkeydown = ((event) => {
   switch (event.key) {
     case "1":
       view = 1;
-      ChangePlot(0, "CPU_util");
+      ChangePlot(0, views[0]);
       break;
 
     case "2":
       view = 2;
-      ChangePlot(0, "Memory");
-      break;
-
-    case "3":
-      view = 3;
-      ChangePlot(0, "Network_io");
-      break;
-
-    case "4":
-      view = 4;
-      if (trace == "CPU_temp") {
-        sensor_to_show = Object.keys(temp_sensors)[(Object.keys(temp_sensors).indexOf(sensor_to_show) + 1) % Object.keys(temp_sensors).length];
-        SelectSensor(sensor_to_show);
-        document.getElementById("sensor-selector").value = sensor_to_show;
-      }
-      ChangePlot(0, "CPU_temp");
-      break;
-
-    case "$":
-      view = 4;
-      if (trace == "CPU_temp") {
-        sensor_to_show = Object.keys(temp_sensors)[(Object.keys(temp_sensors).indexOf(sensor_to_show) - 1 + Object.keys(temp_sensors).length) % Object.keys(temp_sensors).length];
-        SelectSensor(sensor_to_show);
-        document.getElementById("sensor-selector").value = sensor_to_show;
-      }
-      ChangePlot(0, "CPU_temp");
-      break;
-
-    case "5":
-      view = 5;
-      if (trace == "Disk_io") {
-        disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + 1) % all_disks.length];
-        DiskSelect(disk_to_show);
-        document.getElementById("disk-selector").value = disk_to_show;
-      }
-      ChangePlot(0, "Disk_io");
-      break;
-
-    case "%":
-      view = 5;
-      if (trace == "Disk_io") {
-        disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + all_disks.length - 1) % all_disks.length];
-        DiskSelect(disk_to_show);
-        document.getElementById("disk-selector").value = disk_to_show;
-      }
-      ChangePlot(0, "Disk_io");
-      break;
-
-    case "6":
-      view = 6;
-      if (trace == "Meross_power") {
+      if (trace == views[1]) {
         meross_power_to_show = all_sensors[(all_sensors.indexOf(meross_power_to_show) + 1) % all_sensors.length];
         MerossPowerSelect(meross_power_to_show);
         document.getElementById("meross-selector").value = meross_power_to_show;
       }
-      ChangePlot(0, "Meross_power");
+      ChangePlot(0, views[1]);
       break;
 
-    case "^":
-      view = 6;
-      if (trace == "Meross_power") {
+    case "@":
+      view = 2;
+      if (trace == views[1]) {
         meross_power_to_show = all_sensors[(all_sensors.indexOf(meross_power_to_show) + all_sensors.length - 1) % all_sensors.length];
         MerossPowerSelect(meross_power_to_show);
         document.getElementById("meross-selector").value = meross_power_to_show;
       }
-      ChangePlot(0, "Meross_power");
+      ChangePlot(0, views[1]);
+      break;
+
+    case "3":
+      view = 2;
+      ChangePlot(0, views[2]);
+      break;
+
+    case "4":
+      view = 3;
+      ChangePlot(0, views[3]);
+      break;
+
+    case "5":
+      view = 4;
+      if (trace == views[4]) {
+        sensor_to_show = Object.keys(temp_sensors)[(Object.keys(temp_sensors).indexOf(sensor_to_show) + 1) % Object.keys(temp_sensors).length];
+        SelectSensor(sensor_to_show);
+        document.getElementById("sensor-selector").value = sensor_to_show;
+      }
+      ChangePlot(0, views[4]);
+      break;
+
+    case "%":
+      view = 4;
+      if (trace == views[4]) {
+        sensor_to_show = Object.keys(temp_sensors)[(Object.keys(temp_sensors).indexOf(sensor_to_show) - 1 + Object.keys(temp_sensors).length) % Object.keys(temp_sensors).length];
+        SelectSensor(sensor_to_show);
+        document.getElementById("sensor-selector").value = sensor_to_show;
+      }
+      ChangePlot(0, views[4]);
+      break;
+
+    case "6":
+      view = 5;
+      if (trace == views[5]) {
+        disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + 1) % all_disks.length];
+        DiskSelect(disk_to_show);
+        document.getElementById("disk-selector").value = disk_to_show;
+      }
+      ChangePlot(0, views[5]);
+      break;
+
+    case "^":
+      view = 5;
+      if (trace == views[5]) {
+        disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + all_disks.length - 1) % all_disks.length];
+        DiskSelect(disk_to_show);
+        document.getElementById("disk-selector").value = disk_to_show;
+      }
+      ChangePlot(0, views[5]);
       break;
 
     case "ArrowRight":
