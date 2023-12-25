@@ -787,6 +787,7 @@ function formatTime(uptime) {
 
 sio.on("status_update", (status) => {
   status_count = false;
+  console.log(status);
   do_blink();
 
   isDarkMode = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
