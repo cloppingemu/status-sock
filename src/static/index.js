@@ -786,6 +786,7 @@ function update_Network_io({Network_IO}) {
 
 function update_meross_trace() {
   MerossPowerTraces[0].y = meross_power.map(x => x === null ? null : x[meross_power_to_show])
+  MerossPowerTraces[0].name = `${meross_power_to_show}: ${clip10(meross_power[HISTORY_LAST][meross_power_to_show], 1)} W`;
   layout_config.Meross_power.y_axis_max = Math.max(
     ...meross_power.map(x => x ===  null ? 0 : x[meross_power_to_show])
   ) * YAXIS_MAX_MULTIPLIER;
@@ -864,40 +865,36 @@ sio.on("status_update", (status) => {
 
   if (init_done == 1) {
 
+    layout_config[trace].updator(status);
+    layout.yaxis.range = [0, Math.max(1, layout_config[trace].y_axis_max)];
+
     switch (trace) {
       case views[0]:
-        update_CPU_util(status);
+        layout.yaxis.title = layout_config.CPU_util.y_title;
         break;
 
       case views[1]:
-        update_Memory(status);
-        layout.yaxis.range = [0, Math.max(1, layout_config.Memory.y_axis_max)];
         layout.yaxis.title = `Util (${memory_unit})`;
         break;
 
       case views[2]:
-        update_Network_io(status);
-        layout.yaxis.range = [0, Math.max(1, layout_config.Network_io.y_axis_max)];
         layout.yaxis.title = `Net IO (${network_io_unit}ps)`;
         break;
 
       case views[3]:
-        update_CPU_temp(status);
+        layout.yaxis.title = layout_config.CPU_temp.y_title;
         break;
 
       case views[4]:
-        update_Disk_io(status);
-        layout.yaxis.range = [0, Math.max(1, layout_config.Disk_io.y_axis_max)];
         layout.yaxis.title = `Disk IO (${disk_io_unit}ps)`;
         break;
 
       case views[5]:
-        update_Meross_power(status);
-        layout.yaxis.range = [0, Math.max(1, layout_config.Meross_power.y_axis_max)];
         layout.yaxis.title = 'Power (W)';
         break;
       }
-    Plotly.redraw("Plot-Area");
+
+      Plotly.redraw("Plot-Area");
 
     for (let resource of views) {
       if (resource !== trace) {
