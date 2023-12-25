@@ -367,6 +367,9 @@ function DiskSelect(disk) {
 
 function MerossPowerSelectFromMenu(sensor) {
   MerossPowerSelect(sensor);
+  if (trace == "Meross_power") {
+    ChangePlot(0, trace);
+  }
 }
 function MerossPowerSelect(sensor) {
   meross_power_to_show = sensor;
