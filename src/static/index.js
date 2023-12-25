@@ -106,6 +106,13 @@ let ram_unit = "GB"
 let swap_unit = "GB"
 
 const layout_config = {
+  CPU_util: {
+    chart_title: "CPU Util",
+    y_title: "Util (%)",
+    y_axis_max: 100,
+    legend_traceorder: "reversed",
+    updator: update_CPU_util,
+  },
   Memory: {
     chart_title: "Memory",
     y_title: "Util (GB)",
@@ -113,12 +120,12 @@ const layout_config = {
     legend_traceorder: "normal",
     updator: update_Memory,
   },
-  CPU_util: {
-    chart_title: "CPU Util",
-    y_title: "Util (%)",
-    y_axis_max: 100,
-    legend_traceorder: "reversed",
-    updator: update_CPU_util,
+  Network_io: {
+    chart_title: "Network IO",
+    y_title: `Net IO (${network_io_unit}ps)`,
+    y_axis_max: 1024,
+    legend_traceorder: "normal",
+    updator: update_Network_io,
   },
   CPU_temp: {
     chart_title: "Temperature",
@@ -134,12 +141,12 @@ const layout_config = {
     legend_traceorder: "normal",
     updator: update_Disk_io,
   },
-  Network_io: {
-    chart_title: "Network IO",
-    y_title: `Net IO (${network_io_unit}ps)`,
-    y_axis_max: 1024,
+  Meross_power: {
+    chart_title: "Power Draw",
+    y_title: "Power (w)",
+    y_axis_max: 250,
     legend_traceorder: "normal",
-    updator: update_Neteork_io,
+    updator: update_Meross_power,
   },
 };
 
@@ -166,12 +173,18 @@ let DiskIoTraces = [ ];
 let network_io = { };
 let NetworkIoTraces = [ ];
 
+let meross_power_to_show;
+const all_sensors = [ ];
+let meross_power = [ ];
+let MerossPowerTraces = [ ]
+
 let Traces = {
   CPU_util: CpuUtilTraces,
   Memory: MemTraces,
   CPU_temp: CpuTempTraces,
   Network_io: NetworkIoTraces,
   Disk_io: DiskIoTraces,
+  Meross_power: MerossPowerTraces,
 };
 
 const layout = {
@@ -236,6 +249,7 @@ const eventNameMapping = {
   "Memory": "memory",
   "Network_io": "network",
   "Disk_io": "disk-io",
+  "Meross_power": "meross-power",
 }
 
 function ChangePlot(event, key) {
@@ -290,7 +304,6 @@ function SelectSensorFromMenu(sensor) {
     ChangePlot(0, trace);
   }
 }
-
 function SelectSensor(sensor) {
   sensor_to_show = sensor;
 
@@ -320,13 +333,13 @@ function SelectSensor(sensor) {
   })];
 }
 
+
 function DiskSelectFromMenu(disk) {
   DiskSelect(disk);
   if (trace == "Disk_io") {
     ChangePlot(0, trace);
   }
 }
-
 function DiskSelect(disk) {
   disk_to_show = disk;
 
@@ -351,6 +364,17 @@ function DiskSelect(disk) {
   DiskIoGhost.innerText = ghostTxt;
 }
 
+
+function MerossPowerSelectFromMenu(sensor) {
+  MerossPowerSelect(sensor);
+}
+function MerossPowerSelect(sensor) {
+  meross_power_to_show = sensor;
+  update_meross_trace();
+
+  const ghostTxt = clip10(meross_power[HISTORY_LAST][meross_power_to_show], 1);
+  MerossGhost.innerText = `${ghostTxt}W`;
+}
 
 // ----------------------------------------------------
 
@@ -508,12 +532,31 @@ sio.on("status_init", (init) => {
     },
   ];
 
+  meross_power = Array(HISTORY_SIZE).fill(null);
+  meross_power[HISTORY_LAST] = init.Meross_Power
+  meross_power_to_show = Object.keys(init.Meross_Power).sort()[0]
+
+  MerossPowerTraces = [
+    {
+      x: time,
+      y: Array(HISTORY_LAST).fill(null),
+      name: `${meross_power_to_show}`,
+      line: {
+        shape: LINE_SHAPE,
+        smoothing: LINE_SMOOTHING,
+        width: LINE_WIDTH_THICK
+      },
+      showlegend: true
+    }
+  ]
+
   Traces = {
     CPU_util: CpuUtilTraces,
     Memory: MemTraces,
     CPU_temp: CpuTempTraces,
     Network_io: NetworkIoTraces,
     Disk_io: DiskIoTraces,
+    Meross_power: MerossPowerTraces,
   };
 
   temp_sensors = { };
@@ -542,6 +585,16 @@ sio.on("status_init", (init) => {
     document.getElementById("disk-selector").appendChild(disk_option);
 
     all_disks.splice(all_disks.length, 0, disk);
+  }
+
+  Array.from(document.getElementById("meross-selector").children).map(o => o.remove());
+  for (let sensor of Object.keys(init.Meross_Power).sort()) {
+    const sensor_option = document.createElement("option");
+    sensor_option.value = sensor;
+    sensor_option.innerText = sensor;
+    document.getElementById("meross-selector").appendChild(sensor_option);
+
+    all_sensors.splice(all_sensors.length, 0, sensor);
   }
 
   Up_Time = init.Up_Time;
@@ -711,7 +764,7 @@ function update_network_io_trace() {
   ) * YAXIS_MAX_MULTIPLIER;
 }
 const NetGhost = document.getElementById("net-ghost");
-function update_Neteork_io({Network_IO}) {
+function update_Network_io({Network_IO}) {
   network_io.tx.splice(0, HISTORY_LAST, ...network_io.tx.slice(1, HISTORY_LAST));
   network_io.rx.splice(0, HISTORY_LAST, ...network_io.rx.slice(1, HISTORY_LAST));
   network_io.tx[HISTORY_LAST] = parseFloat(Network_IO.tx);
@@ -730,6 +783,24 @@ function update_Neteork_io({Network_IO}) {
   const ghostTxt = network_io.rx[HISTORY_LAST] > network_io.tx[HISTORY_LAST] ? `↓ ${rxGhost}${rx_io_unit}` : `↑ ${txGhost}${tx_io_unit}`;
   NetGhost.innerText = `${ghostTxt}ps`;
 }
+
+function update_meross_trace() {
+  MerossPowerTraces[0].y = meross_power.map(x => x === null ? null : x[meross_power_to_show])
+  layout_config.Meross_power.y_axis_max = Math.max(
+    ...meross_power.map(x => x ===  null ? 0 : x[meross_power_to_show])
+  ) * YAXIS_MAX_MULTIPLIER;
+}
+const MerossGhost = document.getElementById("meross-power-ghost")
+function update_Meross_power({Meross_Power}) {
+  meross_power.splice(0, HISTORY_LAST, ...meross_power.slice(1, HISTORY_LAST));
+  meross_power[HISTORY_LAST] = Meross_Power;
+
+  update_meross_trace();
+
+  const ghostTxt = clip10(Meross_Power[meross_power_to_show], 1);
+  MerossGhost.innerText = `${ghostTxt}W`;
+}
+
 
 function do_blink() {
   status_count = !status_count;
@@ -787,7 +858,6 @@ function formatTime(uptime) {
 
 sio.on("status_update", (status) => {
   status_count = false;
-  console.log(status.Meross_Power);
   do_blink();
 
   isDarkMode = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -795,35 +865,41 @@ sio.on("status_update", (status) => {
   if (init_done == 1) {
 
     switch (trace) {
-      case "CPU_temp":
-        update_CPU_temp(status);
-        break;
-
-      case "CPU_util":
+      case views[0]:
         update_CPU_util(status);
         break;
 
-      case "Disk_io":
-        update_Disk_io(status);
-        layout.yaxis.range = [0, Math.max(1, layout_config.Disk_io.y_axis_max)];
-        layout.yaxis.title = `Disk IO (${disk_io_unit}ps)`;
-        break;
-
-      case "Memory":
+      case views[1]:
         update_Memory(status);
         layout.yaxis.range = [0, Math.max(1, layout_config.Memory.y_axis_max)];
         layout.yaxis.title = `Util (${memory_unit})`;
         break;
 
-      case "Network_io":
-        update_Neteork_io(status);
+      case views[2]:
+        update_Network_io(status);
         layout.yaxis.range = [0, Math.max(1, layout_config.Network_io.y_axis_max)];
         layout.yaxis.title = `Net IO (${network_io_unit}ps)`;
         break;
-    }
+
+      case views[3]:
+        update_CPU_temp(status);
+        break;
+
+      case views[4]:
+        update_Disk_io(status);
+        layout.yaxis.range = [0, Math.max(1, layout_config.Disk_io.y_axis_max)];
+        layout.yaxis.title = `Disk IO (${disk_io_unit}ps)`;
+        break;
+
+      case views[5]:
+        update_Meross_power(status);
+        layout.yaxis.range = [0, Math.max(1, layout_config.Meross_power.y_axis_max)];
+        layout.yaxis.title = 'Power (W)';
+        break;
+      }
     Plotly.redraw("Plot-Area");
 
-    for (let resource of Object.keys(layout_config)) {
+    for (let resource of views) {
       if (resource !== trace) {
         layout_config[resource].updator(status);
       }
@@ -839,7 +915,8 @@ const views = [
   "Memory",
   "Network_io",
   "CPU_temp",
-  "Disk_io"
+  "Disk_io",
+  "Meross_power",
 ]
 
 document.onkeydown = ((event) => {
@@ -899,6 +976,26 @@ document.onkeydown = ((event) => {
       ChangePlot(0, "Disk_io");
       break;
 
+    case "6":
+      view = 6;
+      if (trace == "Meross_power") {
+        meross_power_to_show = all_sensors[(all_sensors.indexOf(meross_power_to_show) + 1) % all_sensors.length];
+        MerossPowerSelect(meross_power_to_show);
+        document.getElementById("meross-selector").value = meross_power_to_show;
+      }
+      ChangePlot(0, "Meross_power");
+      break;
+
+    case "^":
+      view = 6;
+      if (trace == "Meross_power") {
+        meross_power_to_show = all_sensors[(all_sensors.indexOf(meross_power_to_show) + all_sensors.length - 1) % all_sensors.length];
+        MerossPowerSelect(meross_power_to_show);
+        document.getElementById("meross-selector").value = meross_power_to_show;
+      }
+      ChangePlot(0, "Meross_power");
+      break;
+
     case "ArrowRight":
     case "`":
       view = (view % views.length) + 1;
@@ -923,6 +1020,11 @@ document.onkeydown = ((event) => {
         SelectSensor(sensor_to_show);
         document.getElementById("sensor-selector").value = sensor_to_show;
         ChangePlot(0, "CPU_temp");
+      } else if (trace == "Meross_power") {
+        meross_power_to_show = all_sensors[(all_sensors.indexOf(meross_power_to_show) + all_sensors.length - 1) % all_sensors.length];
+        MerossPowerSelect(meross_power_to_show);
+        document.getElementById("meross-selector").value = meross_power_to_show;
+        ChangePlot(0, "Meross_power");
       }
       break;
 
@@ -937,6 +1039,11 @@ document.onkeydown = ((event) => {
         SelectSensor(sensor_to_show);
         document.getElementById("sensor-selector").value = sensor_to_show;
         ChangePlot(0, "CPU_temp");
+      } else if (trace = "Meross_power") {
+        meross_power_to_show = all_sensors[(all_sensors.indexOf(meross_power_to_show) + 1) % all_sensors.length];
+        MerossPowerSelect(meross_power_to_show);
+        document.getElementById("meross-selector").value = meross_power_to_show;
+        ChangePlot(0, "Meross_power");
       }
       break;
   }

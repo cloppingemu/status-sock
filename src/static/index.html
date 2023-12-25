@@ -38,9 +38,16 @@
         <span class="navigator-targets disk-io" onclick="ChangePlot(event, 'Disk_io')">
           <span class="disk-io-nav">
             <span class="squeamish">Disk IO</span>
-            <select class="squeamish" name="disk-selector" id="disk-selector" onchange="DiskSelectFromMenu(this.value)"></select>  
+            <select class="squeamish" name="disk-selector" id="disk-selector" onchange="DiskSelectFromMenu(this.value)"></select>
           </span>
           <span class="squeamish ghost" id="disk-ghost">0bps</span>
+        </span>
+        <span class="navigator-targets meross-power" onclick="ChangePlot(event, 'Meross_power')">
+          <span class="disk-io-nav">
+            <span class="squeamish">Power</span>
+            <select class="squeamish" name="meross-selector" id="meross-selector" onchange="MerossPowerSelectFromMenu(this.value)"></select>
+          </span>
+          <span class="squeamish ghost" id="meross-power-ghost">0W</span>
         </span>
       </span>
     </div>

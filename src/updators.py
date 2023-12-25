@@ -220,7 +220,8 @@ class Task:
 
   async def cleanup(self):
     if self.ready:
-      return await self.meross_checker.cleanup()
+      await self.meross_checker.cleanup()
+      self.ready = False
 
   async def up_time(self):
     return await self.up_time_checker.refresh()
