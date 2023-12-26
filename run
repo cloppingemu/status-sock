@@ -4,7 +4,7 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 case $1 in
   env | e)
-    if [ ! -f "$SCRIPT_DIR/env/bin/python" ]; then 
+    if [ ! -f "$SCRIPT_DIR/env/bin/python" ]; then
       virtualenv $SCRIPT_DIR/env
     fi
     if [ $# -ge 2 ]; then

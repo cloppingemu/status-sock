@@ -177,13 +177,14 @@ class Meross(Checkers):
     self.manager.default_transport_mode = TransportMode.LAN_HTTP_FIRST_ONLY_GET
 
     await asyncio.gather(*[dev.async_update() for dev in self.devs])
+    await self._update()
 
+  async def _update(self):
     instant = await asyncio.gather(*[dev.async_get_instant_metrics() for dev in self.devs])
     self._current = {dev.name: inst.power for dev, inst in zip(self.devs, instant)}
 
   async def refresh(self):
-    instant = await asyncio.gather(*[dev.async_get_instant_metrics() for dev in self.devs])
-    self._current = {dev.name: inst.power for dev, inst in zip(self.devs, instant)}
+    await self._update()
     return self._current
 
   async def cleanup(self):
