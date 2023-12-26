@@ -5,6 +5,7 @@ import psutil
 import string
 import time
 
+from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.controller.mixins.electricity import ElectricityMixin
 from meross_iot.http_api import MerossHttpClient
 from meross_iot.manager import MerossManager, TransportMode
@@ -157,7 +158,7 @@ class Meross(Checkers):
   __slots__ = ("manager", "http_api_client", "devs", "_current", )
 
   def __init__(self):
-    pass
+    self._current = {}
 
   async def setup(self):
     self.http_api_client = await MerossHttpClient.async_from_user_password(
@@ -180,8 +181,13 @@ class Meross(Checkers):
     await self._update()
 
   async def _update(self):
-    instant = await asyncio.gather(*[dev.async_get_instant_metrics() for dev in self.devs])
-    self._current = {dev.name: inst.power for dev, inst in zip(self.devs, instant)}
+    instances = await asyncio.gather(*[dev.async_get_instant_metrics() for dev in self.devs], return_exceptions=True)
+    for dev, inst in zip(self.devs, instances):
+      if isinstance(inst, CommandTimeoutError):
+        print(f"Connection error in retrieving {dev.name}")
+        self._current[dev.name] = self._current[dev.name]
+      else:
+        self._current[dev.name] = inst.power
 
   async def refresh(self):
     await self._update()
@@ -194,7 +200,7 @@ class Meross(Checkers):
 
 
 class Task:
-  __slots__ = ("go", "stopped", "sio", "ready",
+  __slots__ = ("go", "stopped", "sio",
                "up_time_checker", "cpu_util_checker",
                "cpu_temp_checker", "mem_util_checker",
                "disk_io_checker", "net_io_checker",
@@ -203,7 +209,6 @@ class Task:
   def __init__(self):
     self.go = False
     self.stopped = True
-    self.ready = False
 
     self.up_time_checker = UpTime()
 
@@ -216,13 +221,10 @@ class Task:
 
   async def setup(self, sio):
     await self.meross_checker.setup()
-    self.ready = True
     self.sio = sio
 
   async def cleanup(self):
-    if self.ready:
-      await self.meross_checker.cleanup()
-      self.ready = False
+    await self.meross_checker.cleanup()
 
   async def up_time(self):
     return await self.up_time_checker.refresh()
@@ -299,17 +301,19 @@ async def main():
   sio = SioStub()
   checker = Task()
   await checker.setup(sio)
-  checker.go = True
 
-  task = asyncio.create_task(checker.repeat(1))
-  (_, pending), _ = await asyncio.gather(
-    asyncio.wait({task}, timeout=0),
-    asyncio.sleep(30)
-  )
-  checker.go = False
-  await asyncio.gather(*pending)
+  try:
+    checker.go = True
 
-  await checker.cleanup()
+    (_, pending), _ = await asyncio.gather(
+      asyncio.wait({checker.repeat(1)}, timeout=0),
+      asyncio.sleep(30),
+    )
+    checker.go = False
+    await asyncio.gather(*pending)
+
+  finally:
+    await checker.cleanup()
 
 
 if __name__ == "__main__":

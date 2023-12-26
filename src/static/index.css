@@ -67,7 +67,7 @@ body {
 }
 
 .squeamish {
-  margin: 0 0.5em;
+  margin: 0 0.25em;
 }
 
 .navigator {
@@ -92,7 +92,7 @@ body {
 
 .disk-io-nav {
   display: flex;
-  justify-content: space-evenly;
+  justify-content: center;
 }
 
 .hidden {
