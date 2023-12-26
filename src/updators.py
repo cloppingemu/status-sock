@@ -246,7 +246,7 @@ class Task:
   async def repeat(self, period):
     self.stopped = False
 
-    cpu_util_v, cpu_temp_v, mem_util_v, disk_io_v, net_io_v, meross_v, _ = await asyncio.gather(
+    cpu_util, cpu_temp, mem_util, disk_io, net_io, meross, _ = await asyncio.gather(
       *self._refresh(
         self.cpu_util_checker,
         self.cpu_temp_checker,
@@ -259,7 +259,7 @@ class Task:
     )
 
     while self.go:
-      (cpu_util_v, cpu_temp_v, mem_util_v, disk_io_v, net_io_v, meross_v, *_) = await asyncio.gather(
+      cpu_util, cpu_temp, mem_util, disk_io, net_io, meross, *_ = await asyncio.gather(
         *self._refresh(
           self.cpu_util_checker,
           self.cpu_temp_checker,
@@ -272,12 +272,12 @@ class Task:
         self.sio.sleep(period),
 
         self.sio.emit("status_update", {
-          "CPU_Util": cpu_util_v,
-          "CPU_Temp": cpu_temp_v,
-          "Memory": mem_util_v,
-          "Disk_IO": disk_io_v,
-          "Network_IO": net_io_v,
-          "Meross_Power": meross_v,
+          "CPU_Util": cpu_util,
+          "CPU_Temp": cpu_temp,
+          "Memory": mem_util,
+          "Disk_IO": disk_io,
+          "Network_IO": net_io,
+          "Meross_Power": meross,
         }),
       )
 

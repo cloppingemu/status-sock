@@ -39,25 +39,27 @@ async def on_connect(sid, *_):
   num_clients += 1
   print(sid, "connected; Active:", num_clients)
 
-  up_time, (cpu_util, cpu_temp, mem_util, net_io, disk_io, meross_power), *_ = await asyncio.gather(
+  up_time, (cpu_util, cpu_temp, mem_util, net_io, disk_io, meross_power) = await asyncio.gather(
     task.up_time(),
     task.current(),
+  )
+
+  await asyncio.gather(
     sio.emit("client_count", {
       "count": num_clients,
     }),
+    sio.emit("status_init", {
+      "Up_Time": up_time,
+      "CPU_Util": cpu_util,
+      "CPU_Temp": cpu_temp,
+      "Memory": mem_util,
+      "Network_IO": net_io,
+      "Disk_IO": disk_io,
+      "Meross_Power": meross_power,
+      "Refresh_Period": REFRESH_PERIOD,
+      "Hostname": gethostname(),
+    }, to=sid),
   )
-
-  await sio.emit("status_init", {
-    "Up_Time": up_time,
-    "CPU_Util": cpu_util,
-    "CPU_Temp": cpu_temp,
-    "Memory": mem_util,
-    "Network_IO": net_io,
-    "Disk_IO": disk_io,
-    "Meross_Power": meross_power,
-    "Refresh_Period": REFRESH_PERIOD,
-    "Hostname": gethostname(),
-  }, to=sid)
 
   if not task.go:
     task.go = True
