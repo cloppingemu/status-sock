@@ -5,6 +5,8 @@ import psutil
 import string
 import time
 
+from aiohttp.client_exceptions import ClientConnectorError
+
 from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.controller.mixins.electricity import ElectricityMixin
 from meross_iot.http_api import MerossHttpClient
@@ -161,11 +163,16 @@ class Meross(Checkers):
     self._current = {}
 
   async def setup(self):
-    self.http_api_client = await MerossHttpClient.async_from_user_password(
-      api_base_url="https://iotx-ap.meross.com",
-      email=MEROSS_USERNAME,
-      password=MEROSS_PASSWORD
-    )
+    while True:
+      try:
+        self.http_api_client = await MerossHttpClient.async_from_user_password(
+          api_base_url="https://iotx-ap.meross.com",
+          email=MEROSS_USERNAME,
+          password=MEROSS_PASSWORD
+        )
+        break
+      except ClientConnectorError:
+        pass
 
     self.manager = MerossManager(http_client=self.http_api_client)
     await self.manager.async_init()
@@ -287,6 +294,11 @@ class Task:
 
 
 class SioStub:
+  __slots__ = ["on_shutdown", "task"]
+
+  def __init__(self, *_, on_shutdown):
+    self.on_shutdown = on_shutdown
+
   @staticmethod
   async def sleep(period):
     return await asyncio.sleep(period)
@@ -295,25 +307,32 @@ class SioStub:
   async def emit(*args, **kwargs):
     print(*args, **kwargs, sep=": ")
 
+  def start_background_task(self, task, *args, **kwargs):
+    self.task = asyncio.create_task(task(*args, **kwargs))
+
+  async def stop(self):
+    await self.task
+    await self.on_shutdown()
+
+  async def __aenter__(self):
+    return self
+
+  async def __aexit__(self, *_):
+    return await self.stop()
 
 
 async def main():
-  sio = SioStub()
   checker = Task()
-  await checker.setup(sio)
 
-  try:
+  async with SioStub(on_shutdown=checker.cleanup) as sio:
+    await checker.setup(sio)
+
     checker.go = True
+    sio.start_background_task(checker.repeat, 1)
 
-    (_, pending), _ = await asyncio.gather(
-      asyncio.wait({checker.repeat(1)}, timeout=0),
-      asyncio.sleep(30),
-    )
+    await asyncio.sleep(20)
+
     checker.go = False
-    await asyncio.gather(*pending)
-
-  finally:
-    await checker.cleanup()
 
 
 if __name__ == "__main__":
