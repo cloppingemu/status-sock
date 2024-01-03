@@ -192,7 +192,6 @@ class Meross(Checkers):
     for dev, inst in zip(self.devs, instances):
       if isinstance(inst, CommandTimeoutError):
         print(f"Connection error in retrieving {dev.name}")
-        self._current[dev.name] = self._current[dev.name]
       else:
         self._current[dev.name] = inst.power
 
