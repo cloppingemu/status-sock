@@ -5,8 +5,6 @@ import psutil
 import string
 import time
 
-from aiohttp.client_exceptions import ClientConnectorError
-
 from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.controller.mixins.electricity import ElectricityMixin
 from meross_iot.http_api import MerossHttpClient
@@ -157,38 +155,47 @@ with open(os.path.join(os.path.dirname(__file__), "creds.json")) as f:
   MEROSS_PASSWORD = creds["MEROSS_PASSWORD"]
 
 class Meross(Checkers):
-  __slots__ = ("manager", "http_api_client", "devs", "_current", )
+  __slots__ = ("manager", "http_api_client", "devs", "_current", "lock",)
 
   def __init__(self):
     self._current = {}
+    self.lock = asyncio.Lock()
 
   async def setup(self):
-    while True:
-      try:
-        self.http_api_client = await MerossHttpClient.async_from_user_password(
-          api_base_url="https://iotx-ap.meross.com",
-          email=MEROSS_USERNAME,
-          password=MEROSS_PASSWORD
-        )
-        break
-      except ClientConnectorError:
-        pass
+    # for _ in range(5):
+    #   try:
+    self.http_api_client = await MerossHttpClient.async_from_user_password(
+      api_base_url="https://iotx-ap.meross.com",
+      email=MEROSS_USERNAME,
+      password=MEROSS_PASSWORD
+    )
+    #     break
+    #   except ClientConnectorError:
+    #     pass
+    # else:
+    #   raise ClientConnectorError
 
     self.manager = MerossManager(http_client=self.http_api_client)
     await self.manager.async_init()
-    await self.manager.async_device_discovery()
-
-    self.devs = self.manager.find_devices(device_class=ElectricityMixin)
-    if len(self.devs) < 1:
-      await self.exit()
-      raise ValueError("No electricity-capable device found")
     self.manager.default_transport_mode = TransportMode.LAN_HTTP_FIRST_ONLY_GET
 
-    await asyncio.gather(*[dev.async_update() for dev in self.devs])
+    await self.rediscover_devices()
     await self._update()
 
+  async def rediscover_devices(self):
+      async with self.lock:
+        await self.manager.async_device_discovery()
+        self.devs = self.manager.find_devices(device_class=ElectricityMixin)
+        if len(self.devs) < 1:
+          await self.cleanup()
+          raise ValueError("No electricity-capable device found")
+
+        await asyncio.gather(*[dev.async_update() for dev in self.devs])
+
   async def _update(self):
-    instances = await asyncio.gather(*[dev.async_get_instant_metrics() for dev in self.devs], return_exceptions=True)
+    async with self.lock:
+      instances = await asyncio.gather(*[dev.async_get_instant_metrics() for dev in self.devs], return_exceptions=True)
+
     for dev, inst in zip(self.devs, instances):
       if isinstance(inst, CommandTimeoutError):
         print(f"Connection error in retrieving {dev.name}")
@@ -200,21 +207,23 @@ class Meross(Checkers):
     return self._current
 
   async def cleanup(self):
-    print("Meross cleanup crew")
+    print("Meross cleanup")
     self.manager.close()
     await self.http_api_client.async_logout()
 
 
 class Task:
-  __slots__ = ("go", "stopped", "sio",
+  __slots__ = ("go", "sio",
+               "repeat_stopped", "rediscovery_stopped",
+               "meross_checker",
                "up_time_checker", "cpu_util_checker",
                "cpu_temp_checker", "mem_util_checker",
-               "disk_io_checker", "net_io_checker",
-               "meross_checker")
+               "disk_io_checker", "net_io_checker")
 
   def __init__(self):
     self.go = False
-    self.stopped = True
+    self.repeat_stopped = True
+    self.rediscovery_stopped = True
 
     self.up_time_checker = UpTime()
 
@@ -250,7 +259,7 @@ class Task:
     return [resource.refresh() for resource in args]
 
   async def repeat(self, period):
-    self.stopped = False
+    self.repeat_stopped = False
 
     cpu_util, cpu_temp, mem_util, disk_io, net_io, meross, _ = await asyncio.gather(
       *self._refresh(
@@ -287,9 +296,20 @@ class Task:
         }),
       )
 
-    self.stopped = True
-    print("Exiting background task")
+    self.repeat_stopped = True
 
+  async def rediscover(self, period):
+    self.rediscovery_stopped = False
+
+    await self.sio.sleep(period)
+
+    while self.go:
+      await asyncio.gather(
+        self.meross_checker.rediscover_devices(),
+        self.sio.sleep(period)
+      )
+
+    self.rediscovery_stopped = True
 
 
 class SioStub:
@@ -327,7 +347,9 @@ async def main():
     await checker.setup(sio)
 
     checker.go = True
+
     sio.start_background_task(checker.repeat, 1)
+    sio.start_background_task(checker.rediscover, 10)
 
     await asyncio.sleep(20)
 

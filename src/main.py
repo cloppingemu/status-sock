@@ -6,7 +6,9 @@ import socketio
 
 import updators
 
-REFRESH_PERIOD = 1  # second
+REFRESH_PERIOD = 1      # second(s)
+# REDISCOVER_PERIOD = 60  # seconds
+
 STATIC_FILES_DIR = f"{os.path.dirname(__file__)}/static"
 ROOT_VIEW = "index.html"
 
@@ -63,9 +65,11 @@ async def on_connect(sid, *_):
 
   if not task.go:
     task.go = True
-    if task.stopped:
-      sio.start_background_task(task.repeat, REFRESH_PERIOD)
+    # if task.rediscovery_stopped:
+    #   sio.start_background_task(task.rediscover, REDISCOVER_PERIOD)
 
+    if task.repeat_stopped:
+      sio.start_background_task(task.repeat, REFRESH_PERIOD)
 
 @sio.on("disconnect")
 async def on_disconnect(sid):
