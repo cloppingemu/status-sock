@@ -9,6 +9,7 @@ from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.controller.mixins.electricity import ElectricityMixin
 from meross_iot.http_api import MerossHttpClient
 from meross_iot.manager import MerossManager, TransportMode
+from meross_iot.model.enums import OnlineStatus
 
 
 class Checkers:
@@ -185,7 +186,7 @@ class Meross(Checkers):
   async def rediscover_devices(self):
       async with self.lock:
         await self.manager.async_device_discovery()
-        self.devs = self.manager.find_devices(device_class=ElectricityMixin)
+        self.devs = self.manager.find_devices(device_class=ElectricityMixin, online_status=OnlineStatus.ONLINE)
         if len(self.devs) < 1:
           await self.cleanup()
           raise ValueError("No electricity-capable device found")
