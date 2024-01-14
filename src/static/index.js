@@ -640,6 +640,7 @@ function update_Disk_io({Disk_IO}) {
       disk_option.value = disk;
       disk_option.innerText = disk;
       document.getElementById("disk-selector").appendChild(disk_option);
+
       all_disks.splice(all_disks.length, 0, disk);
     }
   }
@@ -788,14 +789,50 @@ function update_Network_io({Network_IO}) {
 }
 
 function update_meross_trace() {
-  MerossPowerTraces[0].y = meross_power.map(x => x === null ? null : x[meross_power_to_show])
+  MerossPowerTraces[0].y = meross_power.map(x => x === null ? null : x[meross_power_to_show] === undefined ? null : x[meross_power_to_show])
   MerossPowerTraces[0].name = `${meross_power_to_show}: ${clip10(meross_power[HISTORY_LAST][meross_power_to_show], 1)} W`;
   layout_config.Meross_power.y_axis_max = Math.max(
-    ...meross_power.map(x => x ===  null ? 0 : x[meross_power_to_show])
+    ...meross_power.map(x => x === null ? 0 : x[meross_power_to_show] === undefined ? 0 : x[meross_power_to_show])
   ) * YAXIS_MAX_MULTIPLIER;
 }
 const MerossGhost = document.getElementById("meross-power-ghost")
 function update_Meross_power({Meross_Power}) {
+  const new_sensors = Object.keys(Meross_Power).filter((sensor) => !Object.keys(meross_power[HISTORY_LAST]).includes(sensor));
+  const missing_sensors = Object.keys(meross_power[HISTORY_LAST]).filter((sensor) => !Object.keys(Meross_Power).includes(sensor));
+
+  if (new_sensors.length) {
+    Array.from(document.getElementById("meross-selector").children).map(o => o.remove());
+    all_sensors.splice(0, all_sensors.length)
+
+    for (let sensor of Object.keys(Meross_Power).sort()) {
+      const sensor_option = document.createElement("option");
+      sensor_option.value = sensor;
+      sensor_option.innerText = sensor;
+      document.getElementById("meross-selector").appendChild(sensor_option);
+
+      all_sensors.splice(all_sensors.length, 0, sensor);
+    }
+  }
+
+  if (missing_sensors.length) {
+    Array.from(document.getElementById("meross-selector").children).map(o => o.remove());
+    all_sensors.splice(0, all_sensors.length)
+
+    for (let sensor of Object.keys(Meross_Power).sort()) {
+      const sensor_option = document.createElement("option");
+      sensor_option.value = sensor;
+      sensor_option.innerText = sensor;
+      document.getElementById("meross-selector").appendChild(sensor_option);
+
+      all_sensors.splice(all_sensors.length, 0, sensor);
+    }
+
+    if (missing_sensors.includes(meross_power_to_show)) {
+      meross_power_to_show = Object.keys(Meross_Power).sort()[0];
+      document.getElementById("meross-selector").value = meross_power_to_show;
+    }
+  }
+
   meross_power.splice(0, HISTORY_LAST, ...meross_power.slice(1, HISTORY_LAST));
   meross_power[HISTORY_LAST] = Meross_Power;
 

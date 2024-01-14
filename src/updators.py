@@ -5,20 +5,19 @@ import psutil
 import string
 import time
 
-from meross_iot.model.exception import CommandTimeoutError
 from meross_iot.controller.mixins.electricity import ElectricityMixin
 from meross_iot.http_api import MerossHttpClient
 from meross_iot.manager import MerossManager, TransportMode
-from meross_iot.model.enums import OnlineStatus
 
 
 class Checkers:
+  __slots__ = ("_current", )
+
   async def current(self):
     return self._current
 
 
 class CpuUtil(Checkers):
-  __slots__ = ("_current", )
 
   def __init__(self):
     self._update()
@@ -32,7 +31,6 @@ class CpuUtil(Checkers):
 
 
 class MemUtil(Checkers):
-  __slots__ = ("_current", )
 
   def __init__(self):
     self._update()
@@ -58,7 +56,6 @@ class MemUtil(Checkers):
 
 
 class CpuTemp(Checkers):
-  __slots__ = ("_current", )
 
   def __init__(self):
     self._update()
@@ -75,7 +72,7 @@ class CpuTemp(Checkers):
 
 
 class NetworkIo(Checkers):
-  __slots__ = ("_current", "_last")
+  __slots__ = ("_last", )
 
   def __init__(self):
     self._last = psutil.net_io_counters()
@@ -94,7 +91,7 @@ class NetworkIo(Checkers):
 
 
 class DiskIo(Checkers):
-  __slots__ = ("_current", "disks", )
+  __slots__ = ("disks", )
 
   def __init__(self):
     self.register()
@@ -140,7 +137,6 @@ class DiskIo(Checkers):
 
 
 class UpTime(Checkers):
-  __slots__ = ("_current", )
 
   def __init__(self):
     self._current = psutil.boot_time()
@@ -156,25 +152,18 @@ with open(os.path.join(os.path.dirname(__file__), "creds.json")) as f:
   MEROSS_PASSWORD = creds["MEROSS_PASSWORD"]
 
 class Meross(Checkers):
-  __slots__ = ("manager", "http_api_client", "devs", "_current", "lock",)
+  __slots__ = ("manager", "http_api_client", "devs", "lock", )
 
   def __init__(self):
     self._current = {}
     self.lock = asyncio.Lock()
 
   async def setup(self):
-    # for _ in range(5):
-    #   try:
     self.http_api_client = await MerossHttpClient.async_from_user_password(
       api_base_url="https://iotx-ap.meross.com",
       email=MEROSS_USERNAME,
       password=MEROSS_PASSWORD
     )
-    #     break
-    #   except ClientConnectorError:
-    #     pass
-    # else:
-    #   raise ClientConnectorError
 
     self.manager = MerossManager(http_client=self.http_api_client)
     await self.manager.async_init()
@@ -186,7 +175,7 @@ class Meross(Checkers):
   async def rediscover_devices(self):
       async with self.lock:
         await self.manager.async_device_discovery()
-        self.devs = self.manager.find_devices(device_class=ElectricityMixin, online_status=OnlineStatus.ONLINE)
+        self.devs = self.manager.find_devices(device_class=ElectricityMixin)
         if len(self.devs) < 1:
           await self.cleanup()
           raise ValueError("No electricity-capable device found")
@@ -198,10 +187,10 @@ class Meross(Checkers):
       instances = await asyncio.gather(*[dev.async_get_instant_metrics() for dev in self.devs], return_exceptions=True)
 
     for dev, inst in zip(self.devs, instances):
-      if isinstance(inst, CommandTimeoutError):
-        print(f"Connection error in retrieving {dev.name}")
-      else:
+      try:
         self._current[dev.name] = inst.power
+      except AttributeError:
+        print(f"Connection error in retrieving {dev.name}")
 
   async def refresh(self):
     await self._update()
@@ -261,6 +250,7 @@ class Task:
 
   async def repeat(self, period):
     self.repeat_stopped = False
+    await self.sio.sleep(period),
 
     cpu_util, cpu_temp, mem_util, disk_io, net_io, meross, _ = await asyncio.gather(
       *self._refresh(
@@ -301,7 +291,6 @@ class Task:
 
   async def rediscover(self, period):
     self.rediscovery_stopped = False
-
     await self.sio.sleep(period)
 
     while self.go:
@@ -314,9 +303,10 @@ class Task:
 
 
 class SioStub:
-  __slots__ = ["on_shutdown", "task"]
+  __slots__ = ["on_shutdown", "tasks"]
 
   def __init__(self, *_, on_shutdown):
+    self.tasks = []
     self.on_shutdown = on_shutdown
 
   @staticmethod
@@ -328,11 +318,14 @@ class SioStub:
     print(*args, **kwargs, sep=": ")
 
   def start_background_task(self, task, *args, **kwargs):
-    self.task = asyncio.create_task(task(*args, **kwargs))
+    self.tasks.append(asyncio.create_task(task(*args, **kwargs)))
 
   async def stop(self):
-    await self.task
-    await self.on_shutdown()
+    await asyncio.gather(*self.tasks, return_exceptions=True)
+    if isinstance(self.on_shutdown, (list, tuple)):
+      await asyncio.gather(*[t() for t in self.on_shutdown])
+    else:
+      await self.on_shutdown()
 
   async def __aenter__(self):
     return self
@@ -344,15 +337,15 @@ class SioStub:
 async def main():
   checker = Task()
 
-  async with SioStub(on_shutdown=checker.cleanup) as sio:
+  async with SioStub(on_shutdown=[checker.cleanup, ]) as sio:
     await checker.setup(sio)
 
     checker.go = True
 
     sio.start_background_task(checker.repeat, 1)
-    sio.start_background_task(checker.rediscover, 10)
+    # sio.start_background_task(checker.rediscover, 15)
 
-    await asyncio.sleep(20)
+    await asyncio.sleep(60)
 
     checker.go = False
 
