@@ -41,6 +41,12 @@ async def on_connect(sid, *_):
   num_clients += 1
   print(sid, "connected; Active:", num_clients)
 
+  if not task.go:
+    await asyncio.gather(
+      *task.refresh_task(),
+      sio.sleep(REFRESH_PERIOD),
+    )
+
   up_time, (cpu_util, cpu_temp, mem_util, net_io, disk_io, meross_power) = await asyncio.gather(
     task.up_time(),
     task.current(),

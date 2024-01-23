@@ -244,37 +244,28 @@ class Task:
       self.meross_checker.current(),
     )
 
-  @staticmethod
-  def _refresh(*args):
-    return [resource.refresh() for resource in args]
+  def refresh_task(self):
+    return [
+      self.cpu_util_checker.refresh(),
+      self.cpu_temp_checker.refresh(),
+      self.mem_util_checker.refresh(),
+      self.disk_io_checker.refresh(),
+      self.net_io_checker.refresh(),
+      self.meross_checker.refresh(),
+    ]
 
   async def repeat(self, period):
     self.repeat_stopped = False
     await self.sio.sleep(period),
 
     cpu_util, cpu_temp, mem_util, disk_io, net_io, meross, _ = await asyncio.gather(
-      *self._refresh(
-        self.cpu_util_checker,
-        self.cpu_temp_checker,
-        self.mem_util_checker,
-        self.disk_io_checker,
-        self.net_io_checker,
-        self.meross_checker,
-      ),
+      *self.refresh_task(),
       self.sio.sleep(period),
     )
 
     while self.go:
       cpu_util, cpu_temp, mem_util, disk_io, net_io, meross, *_ = await asyncio.gather(
-        *self._refresh(
-          self.cpu_util_checker,
-          self.cpu_temp_checker,
-          self.mem_util_checker,
-          self.disk_io_checker,
-          self.net_io_checker,
-          self.meross_checker,
-        ),
-
+        *self.refresh_task(),
         self.sio.sleep(period),
 
         self.sio.emit("status_update", {
