@@ -90,6 +90,13 @@ function clip10(c, n) {
   }
 }
 
+function formatStr(str, replacements) {
+  for (let replacement of replacements) {
+    str = str.replace("{}", replacement);
+  }
+  return str;
+}
+
 // ----------------------------------------------------
 
 
@@ -112,20 +119,25 @@ const layout_config = {
     y_axis_max: 100,
     legend_traceorder: "reversed",
     updator: update_CPU_util,
+    units: () => [],
   },
   Memory: {
     chart_title: "Memory",
-    y_title: "Util (GB)",
+    // y_title: "Util (GB)",
+    y_title: "Util ({})",
     y_axis_max: MAX_RAM_SIZE,
     legend_traceorder: "normal",
     updator: update_Memory,
+    units: () => [memory_unit, ],
   },
   Network_io: {
     chart_title: "Network IO",
-    y_title: `Net IO (${network_io_unit}ps)`,
+    // y_title: `Net IO (${network_io_unit}ps)`,
+    y_title: "Net IO ({}ps)",
     y_axis_max: 1024,
     legend_traceorder: "normal",
     updator: update_Network_io,
+    units: () => [network_io_unit, ],
   },
   CPU_temp: {
     chart_title: "Temperature",
@@ -133,13 +145,16 @@ const layout_config = {
     y_axis_max: 100,
     legend_traceorder: "normal",
     updator: update_CPU_temp,
+    units: () => [],
   },
   Disk_io: {
     chart_title: "Disk IO",
-    y_title: `Disk IO (${disk_io_unit}ps)`,
+    // y_title: `Disk IO (${disk_io_unit}ps)`,
+    y_title: "Disk IO ({}ps)",
     y_axis_max: 10,
     legend_traceorder: "normal",
     updator: update_Disk_io,
+    units: () => [network_io_unit, ],
   },
   Meross_power: {
     chart_title: "Power Draw",
@@ -147,6 +162,7 @@ const layout_config = {
     y_axis_max: 250,
     legend_traceorder: "normal",
     updator: update_Meross_power,
+    units: () => [],
   },
 };
 
@@ -259,7 +275,7 @@ function ChangePlot(event, key) {
   view = views.indexOf(key)+1;
   trace = key;
   layout.title.text = layout_config[key].chart_title;
-  layout.yaxis.title = layout_config[key].y_title;
+  layout.yaxis.title = formatStr(layout_config[trace].y_title, layout_config[trace].units());
   layout.yaxis.range[1] = layout_config[key].y_axis_max;
   layout.legend.traceorder = layout_config[key].legend_traceorder;
 
@@ -297,6 +313,7 @@ if (window.matchMedia) {
   };
 }
 
+// ----------------------------------------------------
 
 function SelectSensorFromMenu(sensor) {
   SelectSensor(sensor);
@@ -904,37 +921,11 @@ sio.on("status_update", (status) => {
   isDarkMode = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
 
   if (init_done == 1) {
-
     layout_config[trace].updator(status);
     layout.yaxis.range = [0, Math.max(1, layout_config[trace].y_axis_max)];
+    layout.yaxis.title = formatStr(layout_config[trace].y_title, layout_config[trace].units());
 
-    switch (trace) {
-      case views[0]:
-        layout.yaxis.title = layout_config[trace].y_title;
-        break;
-
-      case views[1]:
-        layout.yaxis.title = layout_config[trace].y_title;
-        break;
-
-      case views[2]:
-        layout.yaxis.title = `Util (${memory_unit})`;
-        break;
-
-      case views[3]:
-        layout.yaxis.title = `Net IO (${network_io_unit}ps)`;
-        break;
-
-      case views[4]:
-        layout.yaxis.title = layout_config[trace].y_title;
-        break;
-
-      case views[5]:
-        layout.yaxis.title = `Disk IO (${disk_io_unit}ps)`;
-        break;
-      }
-
-      Plotly.redraw("Plot-Area");
+    Plotly.redraw("Plot-Area");
 
     for (let resource of views) {
       if (resource !== trace) {

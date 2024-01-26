@@ -35,10 +35,11 @@ task_setup = asyncio.create_task(task.setup(sio))
 async def on_connect(sid, *_):
   global num_clients, task, task_setup
 
+  num_clients += 1
+
   if not task_setup.done():
     await task_setup
 
-  num_clients += 1
   print(sid, "connected; Active:", num_clients)
 
   if not task.go:
@@ -47,15 +48,16 @@ async def on_connect(sid, *_):
       sio.sleep(REFRESH_PERIOD),
     )
 
-  up_time, (cpu_util, cpu_temp, mem_util, net_io, disk_io, meross_power) = await asyncio.gather(
+  up_time, cpu_util, cpu_temp, mem_util, net_io, disk_io, meross_power = (
     task.up_time(),
-    task.current(),
+    *task.current(),
   )
 
   await asyncio.gather(
     sio.emit("client_count", {
       "count": num_clients,
     }),
+
     sio.emit("status_init", {
       "Up_Time": up_time,
       "CPU_Util": cpu_util,

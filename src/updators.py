@@ -13,7 +13,7 @@ from meross_iot.manager import MerossManager, TransportMode
 class Checkers:
   __slots__ = ("_current", )
 
-  async def current(self):
+  def current(self):
     return self._current
 
 
@@ -141,13 +141,13 @@ class UpTime(Checkers):
   def __init__(self):
     self._current = psutil.boot_time()
 
-  async def refresh(self):
+  def refresh(self):
     return int(time.time() - self._current)
 
 
-
-with open(os.path.join(os.path.dirname(__file__), "creds.json")) as f:
-  creds = json.load(f)
+creds_json = os.path.join(os.path.dirname(__file__), "creds.json")
+with open(creds_json) as fp:
+  creds = json.load(fp)
   MEROSS_USERNAME = creds["MEROSS_USERNAME"]
   MEROSS_PASSWORD = creds["MEROSS_PASSWORD"]
 
@@ -184,7 +184,9 @@ class Meross(Checkers):
 
   async def _update(self):
     async with self.lock:
+      print("Starting meross _update")
       instances = await asyncio.gather(*[dev.async_get_instant_metrics() for dev in self.devs], return_exceptions=True)
+      print(f"meross _update: {instances}")
 
     for dev, inst in zip(self.devs, instances):
       try:
@@ -231,11 +233,11 @@ class Task:
   async def cleanup(self):
     await self.meross_checker.cleanup()
 
-  async def up_time(self):
-    return await self.up_time_checker.refresh()
+  def up_time(self):
+    return self.up_time_checker.refresh()
 
-  async def current(self):
-    return await asyncio.gather(
+  def current(self):
+    return (
       self.cpu_util_checker.current(),
       self.cpu_temp_checker.current(),
       self.mem_util_checker.current(),
