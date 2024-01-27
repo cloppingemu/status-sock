@@ -1,6 +1,6 @@
-let NUM_CPU_PACKAGES = 2;
-let NUM_CPU_CORES = 1;
-let MAX_RAM_SIZE = 1;
+let NUM_CPU_PACKAGES;
+let NUM_CPU_CORES;
+let MAX_RAM_SIZE;
 
 const LINE_SHAPE = "spline";   // "linear";
 const LINE_SMOOTHING = 1.0;    // Has an effect only if `shape` is set to "spline". Sets the amount of smoothing.
@@ -58,15 +58,15 @@ const YAXIS_MAX_MULTIPLIER = 1.25;
 const YAXIS_MIN = 1 / YAXIS_MAX_MULTIPLIER;
 
 let trace = "CPU_util";
-let NUM_TESTER = /[0-9]/;
 let isDarkMode = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-let disk_to_show = "";
+let disk_to_show;
 
 let init_done = 0;        // not done
-let REFRESH_PERIOD = 1.;  // s
-let HISTORY_SIZE = HISTORY_TIME / REFRESH_PERIOD;
-let HISTORY_LAST = HISTORY_SIZE - 1;
+let REFRESH_PERIOD;  // s
+let BLINK_PERIOD;  // s
+let HISTORY_SIZE;
+let HISTORY_LAST;
 
 // const PLOTLY_COLORS = [
 //   "#1f77b4",  // muted blue
@@ -190,7 +190,7 @@ let network_io = { };
 let NetworkIoTraces = [ ];
 
 let meross_power_to_show;
-const all_sensors = [ ];
+let all_sensors = [ ];
 let meross_power = [ ];
 let MerossPowerTraces = [ ]
 
@@ -425,8 +425,9 @@ sio.on("status_init", (init) => {
 
   disk_to_show = Object.keys(init.Disk_IO).sort()[0];
 
-  REFRESH_PERIOD = init.Refresh_Period;
-  HISTORY_SIZE = Math.floor(HISTORY_TIME / REFRESH_PERIOD);
+  BLINK_PERIOD = init.Refresh_Period;
+  REFRESH_PERIOD = init.Time;
+  HISTORY_SIZE = Math.floor(HISTORY_TIME / BLINK_PERIOD);
   HISTORY_LAST = HISTORY_SIZE - 1;
 
   time = Object.keys(Array(HISTORY_SIZE).fill(null)).map(v => v*REFRESH_PERIOD).reverse();
@@ -607,6 +608,7 @@ sio.on("status_init", (init) => {
     all_disks.splice(all_disks.length, 0, disk);
   }
 
+  all_sensors = [];
   Array.from(document.getElementById("meross-selector").children).map(o => o.remove());
   for (let sensor of Object.keys(init.Meross_Power).sort()) {
     const sensor_option = document.createElement("option");
@@ -867,7 +869,7 @@ function do_blink() {
   setTimeout(() => {
     status_count = !status_count;
     indicator_el.style.backgroundColor = heartbeat_colors[status_count%2];
-  }, REFRESH_PERIOD * 1000/2);
+  }, BLINK_PERIOD * 1000/2);
 
   host_uptime.innerText = formatTime(Up_Time);
   Up_Time += 1;
@@ -918,6 +920,7 @@ sio.on("status_update", (status) => {
   status_count = false;
   do_blink();
 
+  REFRESH_PERIOD = status.Time;
   isDarkMode = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
 
   if (init_done == 1) {

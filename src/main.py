@@ -1,13 +1,14 @@
 import asyncio
 import os
+import time
 from socket import gethostname
 
 import socketio
 
 import updators
 
-REFRESH_PERIOD = 1      # second(s)
-# REDISCOVER_PERIOD = 60  # seconds
+REFRESH_PERIOD = 1        # second(s)
+REDISCOVER_PERIOD = 60    # seconds
 
 STATIC_FILES_DIR = f"{os.path.dirname(__file__)}/static"
 ROOT_VIEW = "index.html"
@@ -35,7 +36,7 @@ task_setup = asyncio.create_task(task.setup(sio))
 async def on_connect(sid, *_):
   global num_clients, task, task_setup
 
-  num_clients += 1
+  num_clients = num_clients + 1
 
   if not task_setup.done():
     await task_setup
@@ -68,13 +69,14 @@ async def on_connect(sid, *_):
       "Meross_Power": meross_power,
       "Refresh_Period": REFRESH_PERIOD,
       "Hostname": gethostname(),
+      "Time": REFRESH_PERIOD,
     }, to=sid),
   )
 
   if not task.go:
     task.go = True
-    # if task.rediscovery_stopped:
-    #   sio.start_background_task(task.rediscover, REDISCOVER_PERIOD)
+    if task.rediscovery_stopped:
+      sio.start_background_task(task.rediscover, REDISCOVER_PERIOD)
 
     if task.repeat_stopped:
       sio.start_background_task(task.repeat, REFRESH_PERIOD)
