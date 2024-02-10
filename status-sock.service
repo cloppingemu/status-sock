@@ -18,8 +18,8 @@ ExecStart=<path-to-project-dir>/env/bin/uvicorn \
         --host 0.0.0.0 \
         --port 32000 \
         --app-dir src
-ExecReload=/bin/kill -HUP ${MAINPID}
-RestartSec=1
+ExecReload=/bin/kill -s HUP ${MAINPID}
+RestartSec=5
 Restart=always
 
 [Install]

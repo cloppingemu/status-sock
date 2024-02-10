@@ -1070,7 +1070,7 @@ document.onkeydown = ((event) => {
         SelectSensor(sensor_to_show);
         document.getElementById("sensor-selector").value = sensor_to_show;
         ChangePlot(0, "CPU_temp");
-      } else if (trace = "Meross_power") {
+      } else if (trace == "Meross_power") {
         meross_power_to_show = all_sensors[(all_sensors.indexOf(meross_power_to_show) + 1) % all_sensors.length];
         MerossPowerSelect(meross_power_to_show);
         document.getElementById("meross-selector").value = meross_power_to_show;
