@@ -821,7 +821,7 @@ function update_Meross_power({Meross_Power}) {
 
   if (new_sensors.length) {
     Array.from(document.getElementById("meross-selector").children).map(o => o.remove());
-    all_sensors.splice(0, all_sensors.length)
+    all_sensors.splice(0, all_sensors.length);
 
     for (let sensor of Object.keys(Meross_Power).sort()) {
       const sensor_option = document.createElement("option");
@@ -831,6 +831,11 @@ function update_Meross_power({Meross_Power}) {
 
       all_sensors.splice(all_sensors.length, 0, sensor);
     }
+
+    if (!Object.keys(Meross_Power).includes(meross_power_to_show)) {
+      meross_power_to_show = Object.keys(Meross_Power).sort()[0];
+    }
+    document.getElementById("meross-selector").value = meross_power_to_show;
   }
 
   if (missing_sensors.length) {

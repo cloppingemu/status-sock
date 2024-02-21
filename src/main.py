@@ -1,6 +1,5 @@
 import asyncio
 import os
-import time
 from socket import gethostname
 
 import socketio

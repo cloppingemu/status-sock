@@ -61,7 +61,7 @@ class CpuTemp(Checkers):
     self._update()
 
   def _update(self):
-      self._current = {
+    self._current = {
       k: [s.current for s in v]
       for k, v in psutil.sensors_temperatures().items()
     }
@@ -137,7 +137,6 @@ class DiskIo(Checkers):
 
 
 class UpTime(Checkers):
-
   def __init__(self):
     self._current = psutil.boot_time()
 
