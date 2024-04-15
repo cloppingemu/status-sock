@@ -399,7 +399,7 @@ function MerossPowerSelect(sensor) {
 // ----------------------------------------------------
 
 
-const sio = io()
+const sio = io();
 
 const heartbeat_colors = ["red", "green"];
 var status_count = true;
@@ -408,10 +408,6 @@ const host_uptime = document.getElementById("host_uptime");
 
 sio.on("connect", () => {
   console.log("connected");
-});
-
-sio.on("client_count", (host) => {
-  document.getElementById("active_client_count").innerText = host.count;
 });
 
 sio.on("status_init", (init) => {
@@ -554,7 +550,7 @@ sio.on("status_init", (init) => {
   ];
 
   meross_power = Array(HISTORY_SIZE).fill(null);
-  meross_power[HISTORY_LAST] = init.Meross_Power
+  // meross_power[HISTORY_LAST] = init.Meross_Power
   meross_power_to_show = Object.keys(init.Meross_Power).sort()[0]
 
   MerossPowerTraces = [
@@ -816,8 +812,16 @@ function update_meross_trace() {
 }
 const MerossGhost = document.getElementById("meross-power-ghost")
 function update_Meross_power({Meross_Power}) {
-  const new_sensors = Object.keys(Meross_Power).filter((sensor) => !Object.keys(meross_power[HISTORY_LAST]).includes(sensor));
-  const missing_sensors = Object.keys(meross_power[HISTORY_LAST]).filter((sensor) => !Object.keys(Meross_Power).includes(sensor));
+  let new_sensors;
+  let missing_sensors;
+
+  if (meross_power[HISTORY_LAST]) {
+    new_sensors = Object.keys(Meross_Power).filter((sensor) => !Object.keys(meross_power[HISTORY_LAST]).includes(sensor));
+    missing_sensors = Object.keys(meross_power[HISTORY_LAST]).filter((sensor) => !Object.keys(Meross_Power).includes(sensor));
+  } else {
+    new_sensors = Object.keys(Meross_Power);
+    missing_sensors = [];
+  }
 
   if (new_sensors.length) {
     Array.from(document.getElementById("meross-selector").children).map(o => o.remove());

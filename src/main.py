@@ -54,20 +54,16 @@ async def on_connect(sid, *_):
   )
 
   await asyncio.gather(
-    sio.emit("client_count", {
-      "count": num_clients,
-    }),
-
     sio.emit("status_init", {
       "Up_Time": up_time,
+      "Hostname": gethostname(),
+      "Refresh_Period": REFRESH_PERIOD,
       "CPU_Util": cpu_util,
       "CPU_Temp": cpu_temp,
       "Memory": mem_util,
       "Network_IO": net_io,
       "Disk_IO": disk_io,
       "Meross_Power": meross_power,
-      "Refresh_Period": REFRESH_PERIOD,
-      "Hostname": gethostname(),
       "Time": REFRESH_PERIOD,
     }, to=sid),
   )
@@ -90,4 +86,3 @@ async def on_disconnect(sid):
     task.go = False
 
   print(sid, "disconnected; Active:", num_clients)
-  await sio.emit("client_count", {"count": num_clients})

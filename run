@@ -20,7 +20,7 @@ case $1 in
     else
       PORT=8080
     fi
-    $SCRIPT_DIR/env/bin/uvicorn main:app --host 0.0.0.0 --port $PORT --app-dir $SCRIPT_DIR/src
+    $SCRIPT_DIR/env/bin/uvicorn main:app --host 0.0.0.0 --port $PORT --log-level warning --app-dir $SCRIPT_DIR/src
     ;;
   dev | d)
     if [ $# -ge 2 ]; then
