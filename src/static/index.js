@@ -337,7 +337,7 @@ function SelectSensor(sensor) {
     }
 
     return {
-      x: Object.keys(Array(HISTORY_SIZE).fill(null)).map(v => v*REFRESH_PERIOD).reverse(),
+      x: Object.keys(Array(HISTORY_SIZE).fill(null)).reverse(),
       y: temp_sensors[sensor_to_show].map(s => s ? s[i] : null),
       name: i == 0 ? nameMax : nameAv,
       line: {
