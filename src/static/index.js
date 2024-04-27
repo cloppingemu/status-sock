@@ -105,8 +105,6 @@ let tx_io_unit = "KB";
 let rx_io_unit = "KB";
 
 let disk_io_unit = "MB";
-let read_io_unit = "MB";
-let write_io_unit = "MB";
 
 let memory_unit = "GB"
 let ram_unit = "GB"
@@ -230,7 +228,7 @@ const layout = {
   margin: {
     r: 15,
     l: 50,
-    t: 75,
+    t: 50,
     b: 0,
   },
 
@@ -324,7 +322,7 @@ function SelectSensorFromMenu(sensor) {
 function SelectSensor(sensor) {
   sensor_to_show = sensor;
 
-  Traces.CPU_temp = [...Array.from(Array(Object.keys(temp_sensors[sensor_to_show][HISTORY_LAST]).length).keys(), i => {
+  Traces.CPU_temp = Array.from(Array(Object.keys(temp_sensors[sensor_to_show][HISTORY_LAST]).length).keys(), i => {
     const NUM_TEMP_SENSORS = temp_sensors[sensor_to_show][HISTORY_LAST].length;
     let nameMax = "";
     let nameAv = "";
@@ -347,7 +345,7 @@ function SelectSensor(sensor) {
       },
       showlegend: (NUM_TEMP_SENSORS <= 2) || (NUM_TEMP_SENSORS > 2 && i < 2)
     };
-  })];
+  });
 }
 
 
@@ -360,18 +358,7 @@ function DiskSelectFromMenu(disk) {
 function DiskSelect(disk) {
   disk_to_show = disk;
 
-  disk_io_unit = bisectLeft(Math.max(
-    YAXIS_MIN,
-    ...disk_io[disk_to_show].read,
-    ...disk_io[disk_to_show].write
-  ), CONVERSION_FROM_B);
-  read_io_unit = bisectLeft(Math.max(
-    YAXIS_MIN, ...disk_io[disk_to_show].read
-  ), CONVERSION_FROM_B);
-  write_io_unit = bisectLeft(Math.max(
-    YAXIS_MIN, ...disk_io[disk_to_show].write
-  ), CONVERSION_FROM_B);
-
+  setDiskIoUnits();
   update_disk_io_trace();
   layout_config.Disk_io.y_title = `Disk IO (${disk_io_unit}ps)`;
 
@@ -676,22 +663,32 @@ function update_Disk_io({Disk_IO}) {
   for (let disk of Object.keys(disk_io).sort()) {
     disk_io[disk].read.splice(0, HISTORY_LAST, ...disk_io[disk].read.slice(1, HISTORY_LAST));
     disk_io[disk].write.splice(0, HISTORY_LAST, ...disk_io[disk].write.slice(1, HISTORY_LAST));
-    disk_io[disk].read[HISTORY_LAST] = Disk_IO[disk].read;
-    disk_io[disk].write[HISTORY_LAST] = Disk_IO[disk].write;
+    disk_io[disk].read[HISTORY_LAST] = Disk_IO[disk].read / BLINK_PERIOD;
+    disk_io[disk].write[HISTORY_LAST] = Disk_IO[disk].write / BLINK_PERIOD;
   }
 
-  read_io_unit = bisectLeft(Math.max(
-    YAXIS_MIN, ...disk_io[disk_to_show].read
-  ), CONVERSION_FROM_B);
-  write_io_unit = bisectLeft(Math.max(
-    YAXIS_MIN, ...disk_io[disk_to_show].write
-  ), CONVERSION_FROM_B);
+  setDiskIoUnits();
   update_disk_io_trace();
 
-  const readText = `${DISK_IO_TAGS[0]}: ${clip10(Disk_IO[disk_to_show].read / CONVERSION_FROM_B[read_io_unit], 1)}${read_io_unit}ps`;
-  const writeText = `${DISK_IO_TAGS[1]}: ${clip10(Disk_IO[disk_to_show].write / CONVERSION_FROM_B[write_io_unit], 1)}${write_io_unit}ps`;
+  const readText = `${DISK_IO_TAGS[0]}: ${clip10(Disk_IO[disk_to_show].read / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
+  const writeText = `${DISK_IO_TAGS[1]}: ${clip10(Disk_IO[disk_to_show].write / CONVERSION_FROM_B[disk_io_unit], 1)}${disk_io_unit}ps`;
   const ghostTxt = Disk_IO[disk_to_show].read == 0 && Disk_IO[disk_to_show].write == 0 ? "Idle" : Disk_IO[disk_to_show].read > Disk_IO[disk_to_show].write ? readText : writeText;
   DiskIoGhost.innerText = ghostTxt;
+}
+function setDiskIoUnits() {
+  if (trace == "Disk_io") {
+    disk_io_unit = bisectLeft(Math.max(
+      YAXIS_MIN,
+      ...disk_io[disk_to_show].read,
+      ...disk_io[disk_to_show].write
+    ), CONVERSION_FROM_B);
+  } else {
+    disk_io_unit = bisectLeft(Math.max(
+      YAXIS_MIN,
+      disk_io[disk_to_show].read[0],
+      disk_io[disk_to_show].write[0]
+    ), CONVERSION_FROM_B);
+  }
 }
 
 function update_CPU_temp({CPU_Temp}) {
@@ -786,15 +783,24 @@ const NetGhost = document.getElementById("net-ghost");
 function update_Network_io({Network_IO}) {
   network_io.tx.splice(0, HISTORY_LAST, ...network_io.tx.slice(1, HISTORY_LAST));
   network_io.rx.splice(0, HISTORY_LAST, ...network_io.rx.slice(1, HISTORY_LAST));
-  network_io.tx[HISTORY_LAST] = parseFloat(Network_IO.tx);
-  network_io.rx[HISTORY_LAST] = parseFloat(Network_IO.rx);
+  network_io.tx[HISTORY_LAST] = parseFloat(Network_IO.tx) / BLINK_PERIOD;
+  network_io.rx[HISTORY_LAST] = parseFloat(Network_IO.rx) / BLINK_PERIOD;
 
-  tx_io_unit = bisectLeft(Math.max(
-    YAXIS_MIN, ...network_io.tx
-  ), CONVERSION_FROM_B);
-  rx_io_unit = bisectLeft(Math.max(
-    YAXIS_MIN, ...network_io.rx
-  ), CONVERSION_FROM_B);
+  if (trace == "Network_io") {
+    tx_io_unit = bisectLeft(Math.max(
+      YAXIS_MIN, ...network_io.tx
+    ), CONVERSION_FROM_B);
+    rx_io_unit = bisectLeft(Math.max(
+      YAXIS_MIN, ...network_io.rx
+    ), CONVERSION_FROM_B);
+  } else {
+    tx_io_unit = bisectLeft(Math.max(
+      YAXIS_MIN, network_io.tx[HISTORY_LAST]
+    ), CONVERSION_FROM_B);
+    rx_io_unit = bisectLeft(Math.max(
+      YAXIS_MIN, network_io.rx[HISTORY_LAST]
+    ), CONVERSION_FROM_B);
+  }
   update_network_io_trace();
 
   const txGhost = clip10(network_io.tx[HISTORY_LAST] / CONVERSION_FROM_B[tx_io_unit], 1);

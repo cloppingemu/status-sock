@@ -64,6 +64,13 @@ body {
 
 .container {
   margin-bottom: 2em;
+  display: flex;
+  height: calc(max(100vh - 7.5em, 450px));
+  flex-direction: column;
+}
+
+.container > #Plot-Area {
+  flex-grow: 1;
 }
 
 .squeamish {
@@ -104,8 +111,9 @@ body {
   right: 0;
   bottom: 0;
   padding: 0.25em;
-  width: 100%;
-  background-color: var(--bg);
   color: var(--text);
   text-align: right;
+  background-color: var(--bg);
+  box-sizing: border-box;
+  width: 100%;
 }

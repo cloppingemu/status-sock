@@ -16,15 +16,18 @@
 <body>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.min.js" integrity="sha512-pxLMWs4E33rW9tdIhovcCp2dCo9k4Q8eHw7CETjyjdXf4aX6wvsEBq+KdOJJRFALr6FxNoXx+jksgbE74TZjEw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script>window.io || console.log("Fallback on socket.io") & document.write('<script src="/socket.io.4.5.0.min.js">\x3C/script>')</script>
-  <div id="header">
-    <span id="heartbeat-indicator" class="heartbeat"> </span>
-    <span id="host_uptime-container">
-      Up Time<span id="host_uptime"></span>
-    </span>
-  </div>
 
   <div class="container">
+
+    <div id="header">
+      <span id="heartbeat-indicator" class="heartbeat"> </span>
+      <span id="host_uptime-container">
+        Up Time<span id="host_uptime"></span>
+      </span>
+    </div>
+
     <div id="Plot-Area"></div>
+
     <div id="navigator" class="navigator">
       <span class="navigator-targets cpu-util" onclick="ChangePlot(event, 'CPU_util')"><span class="squeamish">CPU Util</span><br /><span class="squeamish ghost" id="cpu_util-ghost">-%</span></span>
       <span class="navigator-targets meross-power" onclick="ChangePlot(event, 'Meross_power')">
@@ -50,11 +53,11 @@
         </span>
       </span>
     </div>
+
   </div>
 
   <div id="footer">Hostname</div>
 
   <script src="/index.js"></script>
-
 </body>
 </html>
