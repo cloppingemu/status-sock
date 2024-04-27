@@ -620,8 +620,8 @@ function update_disk_io_trace() {
   DiskIoTraces[0].y = disk_io[disk_to_show].read.map(v => v === null ? v : v/CONVERSION_FROM_B[disk_io_unit] / REFRESH_PERIOD);
   DiskIoTraces[1].y = disk_io[disk_to_show].write.map(v => v === null ? v : v/CONVERSION_FROM_B[disk_io_unit] / REFRESH_PERIOD);
 
-  DiskIoTraces[0].name = `${DISK_IO_TAGS[0]}: ${(disk_io[disk_to_show].read[HISTORY_LAST]/CONVERSION_FROM_B[read_io_unit]).toFixed(1)} ${read_io_unit}ps`;
-  DiskIoTraces[1].name = `${DISK_IO_TAGS[1]}: ${(disk_io[disk_to_show].write[HISTORY_LAST]/CONVERSION_FROM_B[write_io_unit]).toFixed(1)} ${write_io_unit}ps`;
+  DiskIoTraces[0].name = `${DISK_IO_TAGS[0]}: ${(disk_io[disk_to_show].read[HISTORY_LAST]/CONVERSION_FROM_B[disk_io_unit]).toFixed(1)} ${disk_io_unit}ps`;
+  DiskIoTraces[1].name = `${DISK_IO_TAGS[1]}: ${(disk_io[disk_to_show].write[HISTORY_LAST]/CONVERSION_FROM_B[disk_io_unit]).toFixed(1)} ${disk_io_unit}ps`;
 
   layout_config.Disk_io.y_axis_max = Math.max(
     YAXIS_MIN, ...DiskIoTraces[0].y, ...DiskIoTraces[1].y
@@ -764,6 +764,12 @@ function update_Memory({Memory}) {
 }
 
 function update_network_io_trace() {
+  /* Server
+   * $ nc -v -v -l -n -p 2222 > /dev/null
+   *
+   * Client
+   * $ pv -t -r -a -b /dev/zero | nc -v -n 192.168.1.1 2222 >/dev/null
+   */
   network_io_unit = bisectLeft(Math.max(
     YAXIS_MIN, ...network_io.tx, ...network_io.rx
   ), CONVERSION_FROM_B);
