@@ -1,16 +1,26 @@
 import asyncio
 import os
 from socket import gethostname
+import json
+import logging
 
 import socketio
 
+from logger import ssLogger
 import updators
+
+logging.basicConfig(level=logging.WARNING)
+
+DIRNAME = os.path.dirname(os.path.abspath(__file__))
+STATIC_FILES_DIR = os.path.join(DIRNAME, "static")
+ROOT_VIEW = "index.html"
 
 REFRESH_PERIOD = 1        # second(s)
 REDISCOVER_PERIOD = 60    # seconds
 
-STATIC_FILES_DIR = f"{os.path.dirname(__file__)}/static"
-ROOT_VIEW = "index.html"
+with open(os.path.join(DIRNAME, "creds.json")) as c:
+  SERVER_MEROSS_NAME = json.load(c)["SERVER_NAME"]
+
 
 dist_html_targets = {
   "/": f"{STATIC_FILES_DIR}/{ROOT_VIEW}",
@@ -40,7 +50,7 @@ async def on_connect(sid, *_):
   if not task_setup.done():
     await task_setup
 
-  print(sid, "connected; Active:", num_clients)
+  ssLogger.info(f"{sid} connected; Active: {num_clients}\n")
 
   if not task.go:
     await asyncio.gather(
@@ -65,6 +75,7 @@ async def on_connect(sid, *_):
       "Disk_IO": disk_io,
       "Meross_Power": meross_power,
       "Time": REFRESH_PERIOD,
+      "Server_Meross_Name": SERVER_MEROSS_NAME
     }, to=sid),
   )
 
@@ -85,4 +96,4 @@ async def on_disconnect(sid):
   if num_clients == 0:
     task.go = False
 
-  print(sid, "disconnected; Active:", num_clients)
+  ssLogger.info(f"{sid} disconnected; Active: {num_clients}\n")

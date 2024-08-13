@@ -3,7 +3,7 @@ let NUM_CPU_CORES;
 let MAX_RAM_SIZE;
 
 const LINE_SHAPE = "spline";   // "linear";
-const LINE_SMOOTHING = 1.0;    // Has an effect only if `shape` is set to "spline". Sets the amount of smoothing.
+const LINE_SMOOTHING = 0.0;    // Has an effect only if `shape` is set to "spline". Sets the amount of smoothing.
                                // "0" corresponds to no smoothing (equivalent to a "linear" shape).
 const LINE_WIDTH_THIN = 1;
 const LINE_WIDTH_NORMAL = 2;
@@ -167,6 +167,8 @@ const layout_config = {
 
 // ----------------------------------------------------
 
+
+let Server_Meross_Name;
 
 let time = [...Array(HISTORY_SIZE).keys()].reverse();
 let Up_Time = 0;
@@ -398,6 +400,8 @@ sio.on("connect", () => {
 });
 
 sio.on("status_init", (init) => {
+  Server_Meross_Name = init.Server_Meross_Name;
+
   document.title = `${init.Hostname}`;
   document.getElementById("footer").innerText = `Hostname: ${init.Hostname}`;
 
@@ -537,8 +541,8 @@ sio.on("status_init", (init) => {
   ];
 
   meross_power = Array(HISTORY_SIZE).fill(null);
-  // meross_power[HISTORY_LAST] = init.Meross_Power
-  meross_power_to_show = Object.keys(init.Meross_Power).sort()[0]
+  let all_meross_sensors = Object.keys(init.Meross_Power);
+  meross_power_to_show = all_meross_sensors.includes(Server_Meross_Name) ? Server_Meross_Name : all_meross_sensors.sort()[0];
 
   MerossPowerTraces = [
     {
@@ -601,6 +605,7 @@ sio.on("status_init", (init) => {
 
     all_sensors.splice(all_sensors.length, 0, sensor);
   }
+  document.getElementById("meross-selector").value = meross_power_to_show;
 
   Up_Time = init.Up_Time;
 
@@ -768,7 +773,7 @@ function update_network_io_trace() {
    * $ nc -v -v -l -n -p 2222 > /dev/null
    *
    * Client
-   * $ pv -t -r -a -b /dev/zero | nc -v -n 192.168.1.1 2222 >/dev/null
+   * $ pv -t -r -a -b /dev/zero | nc -v -n 192.168.1.1 2222 > /dev/null
    */
   network_io_unit = bisectLeft(Math.max(
     YAXIS_MIN, ...network_io.tx, ...network_io.rx
@@ -849,7 +854,7 @@ function update_Meross_power({Meross_Power}) {
     }
 
     if (!Object.keys(Meross_Power).includes(meross_power_to_show)) {
-      meross_power_to_show = Object.keys(Meross_Power).sort()[0];
+      meross_power_to_show = Object.keys(Meross_Power).includes(Server_Meross_Name) ? Server_Meross_Name : Object.keys(Meross_Power).sort()[0];
     }
     document.getElementById("meross-selector").value = meross_power_to_show;
   }
@@ -868,7 +873,7 @@ function update_Meross_power({Meross_Power}) {
     }
 
     if (missing_sensors.includes(meross_power_to_show)) {
-      meross_power_to_show = Object.keys(Meross_Power).sort()[0];
+      meross_power_to_show = Object.keys(Meross_Power).includes(Server_Meross_Name) ? Server_Meross_Name : Object.keys(Meross_Power).sort()[0];
       document.getElementById("meross-selector").value = meross_power_to_show;
     }
   }
@@ -937,7 +942,12 @@ function formatTime(uptime) {
   return uptime_factors_to_show.join(" ");
 }
 
+let after, before = Date.now()
 sio.on("status_update", (status) => {
+  before = after;
+  after = Date.now()
+  console.log(`S: ${status.Time.toFixed(2)}, C: ${(after - before)/1000}`)
+
   status_count = false;
   do_blink();
 

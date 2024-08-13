@@ -9,6 +9,8 @@ from meross_iot.controller.mixins.electricity import ElectricityMixin
 from meross_iot.http_api import MerossHttpClient
 from meross_iot.manager import MerossManager, TransportMode
 
+from logger import ssLogger
+
 
 class Checkers:
   __slots__ = ("_current", )
@@ -151,7 +153,8 @@ with open(creds_json) as fp:
   MEROSS_PASSWORD = creds["MEROSS_PASSWORD"]
 
 class Meross(Checkers):
-  __slots__ = ("manager", "http_api_client", "devs", "lock", "unsuccessful_retrieval", )
+  __slots__ = ("manager", "http_api_client", "devs",
+               "lock", "unsuccessful_retrieval", )
 
   def __init__(self):
     self._current = {}
@@ -195,7 +198,7 @@ class Meross(Checkers):
       try:
         self._current[dev.name] = inst.power
       except AttributeError:
-        print(f"Connection error in retrieving {dev.name}")
+        ssLogger.warning(f"Connection error in retrieving {dev.name}")
         self._current.pop(dev.name)
         self.unsuccessful_retrieval = True
         await self.rediscover_devices()
@@ -205,7 +208,7 @@ class Meross(Checkers):
     return self._current
 
   async def cleanup(self):
-    print("Meross cleanup")
+    ssLogger.debug("Meross cleanup")
     self.manager.close()
     await self.http_api_client.async_logout()
 
@@ -216,7 +219,7 @@ class Task:
                "meross_checker",
                "up_time_checker", "cpu_util_checker",
                "cpu_temp_checker", "mem_util_checker",
-               "disk_io_checker", "net_io_checker")
+               "disk_io_checker", "net_io_checker", )
 
   def __init__(self):
     self.go = False
@@ -306,7 +309,7 @@ class Task:
 
 
 class SioStub:
-  __slots__ = ["on_shutdown", "tasks"]
+  __slots__ = ("on_shutdown", "tasks", )
 
   def __init__(self, *_, on_shutdown=None):
     self.tasks = []
@@ -318,10 +321,15 @@ class SioStub:
 
   @staticmethod
   async def emit(*args, **kwargs):
-    print(*args, **kwargs, sep=": ")
+    ssLogger.info(
+      ": ".join(str(a) for a in args) +
+      ". " +
+      ":: ".join(str(k) for k in kwargs)
+    )
 
   def start_background_task(self, task, *args, **kwargs):
-    self.tasks.append(asyncio.create_task(task(*args, **kwargs)))
+    background_task = asyncio.create_task(task(*args, **kwargs))
+    self.tasks.append(background_task)
 
   async def stop(self):
     await asyncio.gather(*self.tasks, return_exceptions=True)
@@ -344,13 +352,12 @@ async def main():
   async with SioStub(on_shutdown=[checker.cleanup, ]) as sio:
     await checker.setup(sio)
 
-
     checker.go = True
 
     REFRESH_PERIOD = 2
     sio.start_background_task(checker.repeat, REFRESH_PERIOD)
 
-    REDISCOVER_PERIOD = 5
+    REDISCOVER_PERIOD = 15
     sio.start_background_task(checker.rediscover, REDISCOVER_PERIOD)
 
     await sio.sleep(60)
@@ -359,4 +366,7 @@ async def main():
 
 
 if __name__ == "__main__":
+  import logging
+  logging.basicConfig(level=logging.DEBUG)
+
   asyncio.run(main())
