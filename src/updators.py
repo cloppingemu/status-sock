@@ -1,8 +1,55 @@
-import time
-import psutil
 import asyncio
+import os
+import psutil
+import time
 
 import string
+
+
+class Processes:
+  __slots__ = ("refreshing", "pstats", )
+  refreshing: asyncio.Lock
+
+  def __init__(self):
+    self.refreshing = asyncio.Lock()
+
+  async def refresh(self):
+    async def get_pstat(p):
+      p.cpu_percent()
+      dio0 = p.io_counters()
+      await asyncio.sleep(1)
+      dio1 = p.io_counters()
+      mem_info = p.memory_full_info()
+      cmd_all = p.cmdline()
+      cmd = " ".join([os.path.basename(cmd_all[0]), *cmd_all[1:]])
+      return dict(
+        name = cmd,
+        # name = p.name(),
+        cpu_util = p.cpu_percent(),
+        mem_util = dict(
+          uss = mem_info.uss,
+          swap = mem_info.swap
+        ),
+        disk_io = dict(
+          r = dio1.read_bytes - dio0.read_bytes,
+          w = dio1.write_bytes - dio0.write_bytes
+        )
+      )
+
+    refresh_thread = not self.refreshing.locked()
+    async with self.refreshing:
+      if refresh_thread:
+        p_gen = psutil.process_iter([])
+        pstats = await asyncio.gather(
+          *list(map(get_pstat, p_gen)),
+          return_exceptions=True
+        )
+        self.pstats = [
+          p for p in pstats
+          if not isinstance(p, (psutil.NoSuchProcess, psutil.AccessDenied))
+        ]
+
+    return self.pstats
 
 
 class CpuUtil:
@@ -57,6 +104,21 @@ class NetworkIo:
     self.last = net_io
     return {"tx": net_tx, "rx": net_rx}
 
+
+class DiskUsage:
+  __slots__ = tuple()
+
+  def __init__(self):
+    pass
+
+  async def refresh(self):
+    mount_points = sorted(
+      [
+        d.mountpoint for d in psutil.disk_partitions()
+        if not d.mountpoint.startswith("/run/docker")
+      ]
+    )
+    return {p: psutil.disk_usage(p)._asdict() for p in mount_points}
 
 class DiskIo:
   __slots__ = ("last", "disks", )
@@ -123,25 +185,34 @@ async def main():
   cpu_temp = CpuTemp()
   net_io = NetworkIo()
   disk_io = DiskIo()
+  processes = Processes()
+  disk_usage = DiskUsage()
   up_time = UpTime()
 
-  print("UpTime (s)",
-        "CPU-util test (%util)",
-        "CPU-temp test (°C)",
-        "Mem-util test (B)",
-        "Net IO test (Bps)",
-        "Disk IO test (Bps)", sep="\t")
+  print(
+    "UpTime (s)",
+    "CPU-util test (%util)",
+    "CPU-temp test (°C)",
+    "Mem-util test (B)",
+    "Net IO test (Bps)",
+    "Process stats",
+    "Disk IO test (Bps)",
+    "Disk Usage (B)",
+    sep="\t"
+  )
 
-  for _ in range(50):
+  for _ in range(5):
     *v, _ = await asyncio.gather(
       up_time.refresh(),
       cpu_util.refresh(),
       cpu_temp.refresh(),
       mem_util.refresh(),
       net_io.refresh(),
+      processes.refresh(),
       disk_io.refresh(),
+      disk_usage.refresh(),
 
-      asyncio.sleep(0.25),
+      asyncio.sleep(1),
     )
     print("\t".join(map(str, v)))
 

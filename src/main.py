@@ -28,7 +28,8 @@ class Task:
   __slots__ = ("go", "stopped",
                "up_time_checker", "cpu_util_checker",
                "cpu_temp_checker", "mem_checker",
-               "disk_io_checker", "net_io_checker")
+               "disk_io_checker", "disk_usage_checker",
+               "net_io_checker")
 
   def __init__(self):
     self.go = False
@@ -40,18 +41,24 @@ class Task:
     self.mem_checker = updators.MemUtil()
     self.disk_io_checker = updators.DiskIo()
     self.net_io_checker = updators.NetworkIo()
+    self.disk_usage_checker = updators.DiskUsage()
 
   def refresh(self):
     return (self.cpu_util_checker.refresh(),
             self.cpu_temp_checker.refresh(),
             self.mem_checker.refresh(),
             self.net_io_checker.refresh(),
-            self.disk_io_checker.refresh())
+            self.disk_io_checker.refresh(),
+            self.disk_usage_checker.refresh())
 
   async def repeat(self):
     self.stopped = False
     cpu_util, cpu_temp, mem_util, net_io, disk_io, _ = await asyncio.gather(
-      *self.refresh(),
+      self.cpu_util_checker.refresh(),
+      self.cpu_temp_checker.refresh(),
+      self.mem_checker.refresh(),
+      self.net_io_checker.refresh(),
+      self.disk_io_checker.refresh(),
       sio.sleep(REFRESH_PERIOD),
     )
 
@@ -83,7 +90,7 @@ async def on_connect(sid, _):
   num_clients += 1
   print(sid, "connected; Active:", num_clients)
 
-  up_time, cpu_util, cpu_temp, mem_util, net_io, disk_io, *_ = await asyncio.gather(
+  up_time, cpu_util, cpu_temp, mem_util, net_io, disk_io, disk_usage, *_ = await asyncio.gather(
     task.up_time_checker.refresh(),
 
     *task.refresh(),
@@ -100,6 +107,7 @@ async def on_connect(sid, _):
     "Memory": mem_util,
     "Network_IO": net_io,
     "Disk_IO": disk_io,
+    "Disk_Usage": disk_usage,
     "Refresh_Period": REFRESH_PERIOD,
     "Hostname": gethostname(),
   }, to=sid)

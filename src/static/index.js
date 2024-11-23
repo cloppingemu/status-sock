@@ -546,6 +546,69 @@ sio.on("status_init", (init) => {
 
   Up_Time = init.Up_Time;
 
+  const dut = document.getElementById("disk-usage-table");
+  while (dut.firstChild) {
+    dut.removeChild(dut.lastChild);
+  }
+
+  // ["Mount Point", ("total", "used", "free"), "Used (%)"]
+  const dMetrics = ["total", "used", "free"];
+  let dMetrics_idx = 0;
+
+  const dHeads = document.createElement("tr");
+  const dThMP = document.createElement("th");
+  dThMP.innerText = "Mount Point";
+  dHeads.appendChild(dThMP);
+  const dThMetric = document.createElement("th");
+  dThMetric.innerText = dMetrics[dMetrics_idx].replace(dMetrics[dMetrics_idx][0], dMetrics[dMetrics_idx][0].toUpperCase());
+  dThMetric.style = "cursor: pointer; text-decoration: underline;"
+  dHeads.appendChild(dThMetric);
+  const dThUsed = document.createElement("th");
+  dThUsed.innerText = "Used (%)";
+  dHeads.appendChild(dThUsed);
+  dut.appendChild(dHeads);
+
+  const populateDut = ((el) => {
+    for (const mount_point of Object.keys(init.Disk_Usage)) {
+      const tr = document.createElement("tr");
+
+      const td_mp = document.createElement("td");
+      td_mp.innerText = mount_point;
+      tr.appendChild(td_mp);
+
+      const td = document.createElement("td");
+      const unit = bisectLeft(init.Disk_Usage[mount_point][el], CONVERSION_FROM_B);
+      td.innerText = `${Math.round(init.Disk_Usage[mount_point][el] / CONVERSION_FROM_B[unit])}${unit}`;
+      tr.appendChild(td);
+
+      const td_percent = document.createElement("td");
+      td_percent.innerText = `${init.Disk_Usage[mount_point].percent}%`;
+      tr.appendChild(td_percent);
+
+      dut.appendChild(tr);
+    }
+  });
+
+  keyDownEvents.z = (() => {
+    while (dut.lastChild.tagName === "TR" && dut.lastChild.lastChild.tagName == "TD") {
+      dut.removeChild(dut.lastChild);
+    }
+    dMetrics_idx = (dMetrics_idx + 1) % dMetrics.length;
+    dThMetric.innerText = dMetrics[dMetrics_idx].replace(dMetrics[dMetrics_idx][0], dMetrics[dMetrics_idx][0].toUpperCase());
+    populateDut(dMetrics[dMetrics_idx]);
+  });
+  keyDownEvents.Z = (() => {
+    while (dut.lastChild.tagName === "TR" && dut.lastChild.lastChild.tagName == "TD") {
+      dut.removeChild(dut.lastChild);
+    }
+    dMetrics_idx = (dMetrics_idx + dMetrics.length - 1) % dMetrics.length;
+    dThMetric.innerText = dMetrics[dMetrics_idx].replace(dMetrics[dMetrics_idx][0], dMetrics[dMetrics_idx][0].toUpperCase());
+    populateDut(dMetrics[dMetrics_idx]);
+  });
+  dThMetric.onclick = keyDownEvents.z;
+
+  populateDut(dMetrics[dMetrics_idx]);
+
   init_done = 1;       // done
 
   UpdatePlotColors(isDarkMode ? "dark" : "light");
@@ -841,106 +904,120 @@ const views = [
   "Disk_io"
 ]
 
+const keyDown1 = (() => {
+  view = 1;
+  ChangePlot(0, "CPU_util");
+});
+const keyDown2 = (() => {
+  view = 1;
+  ChangePlot(0, "Memory");
+});
+
+const keyDown3 = (() => {
+  view = 3;
+  ChangePlot(0, "Network_io");
+});
+
+const keyDown4 = (() => {
+  view = 4;
+  if (trace == "CPU_temp") {
+    sensor_to_show = Object.keys(temp_sensors)[(Object.keys(temp_sensors).indexOf(sensor_to_show) + 1) % Object.keys(temp_sensors).length];
+    SelectSensor(sensor_to_show);
+    document.getElementById("sensor-selector").value = sensor_to_show;
+  }
+  ChangePlot(0, "CPU_temp");
+});
+
+const keyDownS4 = (() => {
+  view = 4;
+  if (trace == "CPU_temp") {
+    sensor_to_show = Object.keys(temp_sensors)[(Object.keys(temp_sensors).indexOf(sensor_to_show) - 1 + Object.keys(temp_sensors).length) % Object.keys(temp_sensors).length];
+    SelectSensor(sensor_to_show);
+    document.getElementById("sensor-selector").value = sensor_to_show;
+  }
+  ChangePlot(0, "CPU_temp");
+});
+
+const keyDown5 = (() => {
+  view = 5;
+  if (trace == "Disk_io") {
+    disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + 1) % all_disks.length];
+    DiskSelect(disk_to_show);
+    document.getElementById("disk-selector").value = disk_to_show;
+  }
+  ChangePlot(0, "Disk_io");
+});
+
+const keyDownS5 = (() => {
+  view = 5;
+  if (trace == "Disk_io") {
+    disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + all_disks.length - 1) % all_disks.length];
+    DiskSelect(disk_to_show);
+    document.getElementById("disk-selector").value = disk_to_show;
+  }
+  ChangePlot(0, "Disk_io");
+});
+
+const keyDownArrowRight = (() => {
+  view = (view % views.length) + 1;
+  ChangePlot(0, views[view-1]);
+});
+
+const keyDownArrowLeft = (() => {
+  view = ((view - 1) % views.length);
+  view = view ? view : views.length;
+  ChangePlot(0, views[(view-1)]);
+});
+
+const keyDownArrowUp = (() => {
+  if (trace == "Disk_io") {
+    disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + all_disks.length - 1) % all_disks.length];
+    DiskSelect(disk_to_show);
+    document.getElementById("disk-selector").value = disk_to_show;
+    ChangePlot(0, "Disk_io");
+  } else if (trace == "CPU_temp") {
+    sensor_to_show = Object.keys(temp_sensors)[(Object.keys(temp_sensors).indexOf(sensor_to_show) - 1 + Object.keys(temp_sensors).length) % Object.keys(temp_sensors).length];
+    SelectSensor(sensor_to_show);
+    document.getElementById("sensor-selector").value = sensor_to_show;
+    ChangePlot(0, "CPU_temp");
+  }
+});
+
+const keyDownArrowDown = (() => {
+  if (trace == "Disk_io") {
+    disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + 1) % all_disks.length];
+    DiskSelect(disk_to_show);
+    document.getElementById("disk-selector").value = disk_to_show;
+    ChangePlot(0, "Disk_io");
+  } else if (trace == "CPU_temp") {
+    sensor_to_show = Object.keys(temp_sensors)[(Object.keys(temp_sensors).indexOf(sensor_to_show) + 1) % Object.keys(temp_sensors).length];
+    SelectSensor(sensor_to_show);
+    document.getElementById("sensor-selector").value = sensor_to_show;
+    ChangePlot(0, "CPU_temp");
+  }
+});
+
+const keyDownEvents = {
+  "1": keyDown1,
+  "2": keyDown2,
+  "3": keyDown3,
+  "4": keyDown4,
+  "$": keyDownS4,
+  "5": keyDown5,
+  "%": keyDownS5,
+  "ArrowRight": keyDownArrowRight,
+  "`": keyDownArrowRight,
+  "ArrowLeft": keyDownArrowLeft,
+  "~": keyDownArrowLeft,
+  "ArrowUp": keyDownArrowUp,
+  "ArrowDown": keyDownArrowDown,
+};
+
 document.onkeydown = ((event) => {
-  switch (event.key) {
-    case "1":
-      view = 1;
-      ChangePlot(0, "CPU_util");
-      break;
-
-    case "2":
-      view = 2;
-      ChangePlot(0, "Memory");
-      break;
-
-    case "3":
-      view = 3;
-      ChangePlot(0, "Network_io");
-      break;
-
-    case "4":
-      view = 4;
-      if (trace == "CPU_temp") {
-        sensor_to_show = Object.keys(temp_sensors)[(Object.keys(temp_sensors).indexOf(sensor_to_show) + 1) % Object.keys(temp_sensors).length];
-        SelectSensor(sensor_to_show);
-        document.getElementById("sensor-selector").value = sensor_to_show;
-      }
-      ChangePlot(0, "CPU_temp");
-      break;
-
-    case "$":
-      view = 4;
-      if (trace == "CPU_temp") {
-        sensor_to_show = Object.keys(temp_sensors)[(Object.keys(temp_sensors).indexOf(sensor_to_show) - 1 + Object.keys(temp_sensors).length) % Object.keys(temp_sensors).length];
-        SelectSensor(sensor_to_show);
-        document.getElementById("sensor-selector").value = sensor_to_show;
-      }
-      ChangePlot(0, "CPU_temp");
-      break;
-
-    case "5":
-      view = 5;
-      if (trace == "Disk_io") {
-        disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + 1) % all_disks.length];
-        DiskSelect(disk_to_show);
-        document.getElementById("disk-selector").value = disk_to_show;
-      }
-      ChangePlot(0, "Disk_io");
-      break;
-
-    case "%":
-      view = 5;
-      if (trace == "Disk_io") {
-        disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + all_disks.length - 1) % all_disks.length];
-        DiskSelect(disk_to_show);
-        document.getElementById("disk-selector").value = disk_to_show;
-      }
-      ChangePlot(0, "Disk_io");
-      break;
-
-    case "ArrowRight":
-    case "`":
-      view = (view % views.length) + 1;
-      ChangePlot(0, views[view-1]);
-      break;
-
-    case "ArrowLeft":
-    case "~":
-      view = ((view - 1) % views.length);
-      view = view ? view : views.length;
-      ChangePlot(0, views[(view-1)]);
-      break;
-
-    case "ArrowUp":
-      if (trace == "Disk_io") {
-        disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + all_disks.length - 1) % all_disks.length];
-        DiskSelect(disk_to_show);
-        document.getElementById("disk-selector").value = disk_to_show;
-        ChangePlot(0, "Disk_io");
-      } else if (trace == "CPU_temp") {
-        sensor_to_show = Object.keys(temp_sensors)[(Object.keys(temp_sensors).indexOf(sensor_to_show) - 1 + Object.keys(temp_sensors).length) % Object.keys(temp_sensors).length];
-        SelectSensor(sensor_to_show);
-        document.getElementById("sensor-selector").value = sensor_to_show;
-        ChangePlot(0, "CPU_temp");
-      }
-      break;
-
-    case "ArrowDown":
-      if (trace == "Disk_io") {
-        disk_to_show = all_disks[(all_disks.indexOf(disk_to_show) + 1) % all_disks.length];
-        DiskSelect(disk_to_show);
-        document.getElementById("disk-selector").value = disk_to_show;
-        ChangePlot(0, "Disk_io");
-      } else if (trace == "CPU_temp") {
-        sensor_to_show = Object.keys(temp_sensors)[(Object.keys(temp_sensors).indexOf(sensor_to_show) + 1) % Object.keys(temp_sensors).length];
-        SelectSensor(sensor_to_show);
-        document.getElementById("sensor-selector").value = sensor_to_show;
-        ChangePlot(0, "CPU_temp");
-      }
-      break;
-
-    default:
-      console.log({key: event.key})
-
-  } 
+  if (Object.keys(keyDownEvents).includes(event.key)) {
+    keyDownEvents[event.key]();
+    event.preventDefault();
+  } else {
+    console.log({key: event.key});
+  }
 });

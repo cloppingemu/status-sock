@@ -51,7 +51,7 @@ body {
 #header {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
 }
 .heartbeat {
   border-radius: 50%;
@@ -64,6 +64,17 @@ body {
 
 .container {
   margin-bottom: 2em;
+  display: flex;
+  height: calc(max(100vh - 7.5em, 450px));
+  flex-direction: column;
+}
+
+.container > #Plot-Area {
+  flex-grow: 1;
+}
+
+th, td {
+  padding-right: 1em;
 }
 
 .squeamish {
