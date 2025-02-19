@@ -14,9 +14,9 @@ const CONVERSION_FROM_B = {
   B: 1,
   KB: 1024,
   MB: 1024 * 1024,
-  GB: 1024 * 1024 * 1024
+  GB: 1024 * 1024 * 1024,
+  TB: 1024 * 1024 * 1024 * 1024
 }
-const STORAGE_SIZE = ["B", "KB", "MB", "GB"];
 
 const CPU_UTIL_TAG = ["Avg", "Core"];
 const MEMORY_TAG = ["RAM", "Swap"];
@@ -578,7 +578,7 @@ sio.on("status_init", (init) => {
 
       const td = document.createElement("td");
       const unit = bisectLeft(init.Disk_Usage[mount_point][el], CONVERSION_FROM_B);
-      td.innerText = `${Math.round(init.Disk_Usage[mount_point][el] / CONVERSION_FROM_B[unit])}${unit}`;
+      td.innerText = `${(init.Disk_Usage[mount_point][el] / CONVERSION_FROM_B[unit]).toPrecision(3)}${unit}`;
       tr.appendChild(td);
 
       const td_percent = document.createElement("td");
