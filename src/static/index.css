@@ -73,6 +73,20 @@ body {
   flex-grow: 1;
 }
 
+h1 {
+  margin-bottom: 0;
+}
+
+#tables-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+}
+
+.tables {
+  flex-grow: 1;
+}
+
 th, td {
   padding-right: 1em;
 }

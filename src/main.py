@@ -39,8 +39,8 @@ class Task:
     self.cpu_util_checker = updators.CpuUtil()
     self.cpu_temp_checker = updators.CpuTemp()
     self.mem_checker = updators.MemUtil()
-    self.disk_io_checker = updators.DiskIo()
     self.net_io_checker = updators.NetworkIo()
+    self.disk_io_checker = updators.DiskIo()
     self.disk_usage_checker = updators.DiskUsage()
 
   def refresh(self):
@@ -48,8 +48,10 @@ class Task:
             self.cpu_temp_checker.refresh(),
             self.mem_checker.refresh(),
             self.net_io_checker.refresh(),
-            self.disk_io_checker.refresh(),
-            self.disk_usage_checker.refresh())
+            self.disk_io_checker.refresh())
+
+  def init(self):
+    return (self.disk_usage_checker.refresh(), )
 
   async def repeat(self):
     self.stopped = False
@@ -94,6 +96,7 @@ async def on_connect(sid, _):
     task.up_time_checker.refresh(),
 
     *task.refresh(),
+    *task.init(),
 
     sio.emit("client_count", {
       "count": num_clients,
@@ -106,6 +109,10 @@ async def on_connect(sid, _):
     "CPU_Temp": cpu_temp,
     "Memory": mem_util,
     "Network_IO": net_io,
+    "Total_Network_IO": {
+      "tx": task.net_io_checker.last.bytes_sent,
+      "rx": task.net_io_checker.last.bytes_recv
+    },
     "Disk_IO": disk_io,
     "Disk_Usage": disk_usage,
     "Refresh_Period": REFRESH_PERIOD,

@@ -120,8 +120,9 @@ class DiskUsage:
     )
     return {p: psutil.disk_usage(p)._asdict() for p in mount_points}
 
+
 class DiskIo:
-  __slots__ = ("last", "disks", )
+  __slots__ = ("last", "disks", "disk_io")
 
   def __init__(self):
     self.register()
@@ -149,7 +150,7 @@ class DiskIo:
     if lost_disks:
       self.disks = new_disks
 
-    disk_io = {
+    self.disk_io = {
       disk: {
         "read": io[disk].read_bytes - self.last[disk].read_bytes,
         "write": io[disk].write_bytes - self.last[disk].write_bytes,
@@ -161,12 +162,12 @@ class DiskIo:
     unseen_disks = new_disks - self.disks
     if unseen_disks:
       self.disks = new_disks
-      disk_io = {
-        **disk_io,
+      self.disk_io = {
+        **self.disk_io,
         **{k: {"read": 0, "write": 0} for k in unseen_disks}
       }
 
-    return disk_io
+    return self.disk_io
 
 
 class UpTime:

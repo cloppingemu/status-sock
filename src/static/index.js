@@ -546,6 +546,15 @@ sio.on("status_init", (init) => {
 
   Up_Time = init.Up_Time;
 
+  const tx_unit = bisectLeft(init.Total_Network_IO.tx, CONVERSION_FROM_B);
+  const total_tx = (init.Total_Network_IO.tx / CONVERSION_FROM_B[tx_unit]);
+  const total_tx_txt = `${total_tx.toPrecision(3)}${tx_unit}`;
+  document.getElementById("tables-network-io-tx").innerText = total_tx_txt;
+  const rx_unit = bisectLeft(init.Total_Network_IO.rx, CONVERSION_FROM_B);
+  const total_rx = (init.Total_Network_IO.rx / CONVERSION_FROM_B[rx_unit]);
+  const total_rx_txt = `${total_rx.toPrecision(3)}${rx_unit}`;
+  document.getElementById("tables-network-io-rx").innerText = total_rx_txt;
+
   const dut = document.getElementById("disk-usage-table");
   while (dut.firstChild) {
     dut.removeChild(dut.lastChild);
