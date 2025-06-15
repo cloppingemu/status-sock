@@ -2,7 +2,6 @@ import asyncio
 import os
 from socket import gethostname
 
-from starlette.responses import RedirectResponse
 import socketio
 
 import updators
@@ -22,21 +21,17 @@ DIST_HTML_TARGETS = {
 }
 
 
-def routerMiddleware(app):
-  async def routedApp(scope, recieve, send):
-    if scope["type"] == "http" and \
-      scope["path"] not in ["/socket.io/", *DIST_HTML_TARGETS]:
-      print("Redirecting", scope["type"], scope["path"])
-      response = RedirectResponse(url="/", status_code=308)
-    else:
-      response = app
-    await response(scope, recieve, send)
-
-  return routedApp
+class ASGIAppWithFallback(socketio.ASGIApp):
+  async def not_found(self, _, send):
+        """Handle paths unhandled by ASGIApp."""
+        await send({'type': 'http.response.start',
+                    'status': 308,
+                    'headers': [(b'Location', b'/')]})
+        await send({'type': 'http.response.body'})
 
 
 sio = socketio.AsyncServer(async_mode="asgi")
-app = routerMiddleware(socketio.ASGIApp(sio, static_files=DIST_HTML_TARGETS))
+app = ASGIAppWithFallback(sio, static_files=DIST_HTML_TARGETS)
 
 
 class Task:
