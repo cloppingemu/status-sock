@@ -565,8 +565,11 @@ sio.on("status_init", (init) => {
   let dMetrics_idx = 0;
 
   const dHeads = document.createElement("tr");
+  const dThDev = document.createElement("th");
+  dThDev.innerText = "Device";
+  dHeads.appendChild(dThDev);
   const dThMP = document.createElement("th");
-  dThMP.innerText = "Mount Point";
+  dThMP.innerText = "Location";
   dHeads.appendChild(dThMP);
   const dThMetric = document.createElement("th");
   dThMetric.innerText = dMetrics[dMetrics_idx].replace(dMetrics[dMetrics_idx][0], dMetrics[dMetrics_idx][0].toUpperCase());
@@ -580,6 +583,10 @@ sio.on("status_init", (init) => {
   const populateDut = ((el) => {
     for (const mount_point of Object.keys(init.Disk_Usage)) {
       const tr = document.createElement("tr");
+
+      const td_dev = document.createElement("td");
+      td_dev.innerText = init.Mount_Points[mount_point].startsWith("/dev/") ? init.Mount_Points[mount_point].substring(5) : init.Mount_Points[mount_point];
+      tr.appendChild(td_dev);
 
       const td_mp = document.createElement("td");
       td_mp.innerText = mount_point;
@@ -1026,7 +1033,5 @@ document.onkeydown = ((event) => {
   if (Object.keys(keyDownEvents).includes(event.key)) {
     keyDownEvents[event.key]();
     event.preventDefault();
-  } else {
-    console.log({key: event.key});
   }
 });

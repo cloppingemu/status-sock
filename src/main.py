@@ -2,17 +2,18 @@ import asyncio
 import os
 from socket import gethostname
 
+from starlette.responses import RedirectResponse
 import socketio
 
 import updators
+
 
 REFRESH_PERIOD = 1  # second
 STATIC_FILES_DIR = f"{os.path.dirname(__file__)}/static"
 ROOT_VIEW = "index.html"
 
-dist_html_targets = {
+DIST_HTML_TARGETS = {
   "/": f"{STATIC_FILES_DIR}/{ROOT_VIEW}",
-  "/*": f"{STATIC_FILES_DIR}/{ROOT_VIEW}",
   **{
     f"/{fname}": f"{STATIC_FILES_DIR}/{fname}"
     for fname in os.listdir(STATIC_FILES_DIR)
@@ -20,20 +21,35 @@ dist_html_targets = {
   },
 }
 
+
+def routerMiddleware(app):
+  async def routedApp(scope, recieve, send):
+    if scope["type"] == "http" and \
+      scope["path"] not in ["/socket.io/", *DIST_HTML_TARGETS]:
+      print("Redirecting", scope["type"], scope["path"])
+      response = RedirectResponse(url="/", status_code=308)
+    else:
+      response = app
+    await response(scope, recieve, send)
+
+  return routedApp
+
+
 sio = socketio.AsyncServer(async_mode="asgi")
-app = socketio.ASGIApp(sio, static_files=dist_html_targets)
+app = routerMiddleware(socketio.ASGIApp(sio, static_files=DIST_HTML_TARGETS))
 
 
 class Task:
-  __slots__ = ("go", "stopped",
+  __slots__ = ("go", "stopped", "num_clients",
                "up_time_checker", "cpu_util_checker",
                "cpu_temp_checker", "mem_checker",
                "disk_io_checker", "disk_usage_checker",
-               "net_io_checker")
+               "net_io_checker", "mount_points_checkers")
 
   def __init__(self):
     self.go = False
     self.stopped = True
+    self.num_clients = 0
 
     self.up_time_checker = updators.UpTime()
     self.cpu_util_checker = updators.CpuUtil()
@@ -42,6 +58,7 @@ class Task:
     self.net_io_checker = updators.NetworkIo()
     self.disk_io_checker = updators.DiskIo()
     self.disk_usage_checker = updators.DiskUsage()
+    self.mount_points_checkers = updators.MountPoints()
 
   def refresh(self):
     return (self.cpu_util_checker.refresh(),
@@ -51,7 +68,8 @@ class Task:
             self.disk_io_checker.refresh())
 
   def init(self):
-    return (self.disk_usage_checker.refresh(), )
+    return (self.disk_usage_checker.refresh(),
+            self.mount_points_checkers.refresh(), )
 
   async def repeat(self):
     self.stopped = False
@@ -83,23 +101,25 @@ class Task:
 
 
 task = Task()
-num_clients = 0
 
 @sio.on("connect")
 async def on_connect(sid, _):
-  global num_clients, task
+  task.num_clients += 1
+  print(sid, "connected; Active:", task.num_clients)
 
-  num_clients += 1
-  print(sid, "connected; Active:", num_clients)
-
-  up_time, cpu_util, cpu_temp, mem_util, net_io, disk_io, disk_usage, *_ = await asyncio.gather(
+  (up_time, cpu_util, cpu_temp,
+   mem_util, net_io, disk_io,
+   disk_usage, mount_points, *_) = await asyncio.gather(
     task.up_time_checker.refresh(),
 
+    # up_time, cpu_util, cpu_temp,
+    # mem_util, net_io, disk_io,
     *task.refresh(),
+    # disk_usage, mount_points
     *task.init(),
 
     sio.emit("client_count", {
-      "count": num_clients,
+      "count": task.num_clients,
     }),
   )
 
@@ -115,6 +135,7 @@ async def on_connect(sid, _):
     },
     "Disk_IO": disk_io,
     "Disk_Usage": disk_usage,
+    "Mount_Points": mount_points,
     "Refresh_Period": REFRESH_PERIOD,
     "Hostname": gethostname(),
   }, to=sid)
@@ -126,12 +147,10 @@ async def on_connect(sid, _):
 
 @sio.on("disconnect")
 async def on_disconnect(sid):
-  global num_clients, task
+  task.num_clients -= 1
 
-  num_clients = num_clients - 1
-
-  if num_clients == 0:
+  if task.num_clients == 0:
     task.go = False
 
-  print(sid, "disconnected; Active:", num_clients)
-  await sio.emit("client_count", {"count": num_clients})
+  print(sid, "disconnected; Active:", task.num_clients)
+  await sio.emit("client_count", {"count": task.num_clients})

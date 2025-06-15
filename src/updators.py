@@ -121,6 +121,16 @@ class DiskUsage:
     return {p: psutil.disk_usage(p)._asdict() for p in mount_points}
 
 
+class MountPoints:
+  __slots__ = tuple()
+
+  def __init__(self):
+    pass
+
+  async def refresh(self):
+    return {d.mountpoint: d.device for d in psutil.disk_partitions(all=True)}
+
+
 class DiskIo:
   __slots__ = ("last", "disks", "disk_io")
 
